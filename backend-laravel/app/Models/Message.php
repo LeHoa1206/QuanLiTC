@@ -1,0 +1,46 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Message extends Model
+{
+    public $timestamps = false; // Bảng chỉ có created_at
+    const UPDATED_AT = null;
+    
+    protected $fillable = [
+        'conversation_id',
+        'sender_id',
+        'sender_type',
+        'content',
+        'is_read',
+    ];
+
+    protected $casts = [
+        'is_read' => 'boolean',
+    ];
+
+    // Alias for compatibility
+    public function getMessageAttribute()
+    {
+        return $this->content;
+    }
+    
+    public function setMessageAttribute($value)
+    {
+        $this->attributes['content'] = $value;
+    }
+
+    public function conversation()
+    {
+        return $this->belongsTo(Conversation::class);
+    }
+
+    public function sender()
+    {
+        return $this->belongsTo(User::class, 'sender_id');
+    }
+
+
+}
