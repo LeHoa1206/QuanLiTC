@@ -295,15 +295,16 @@ const UltimatePetHome = () => {
         </div>
       </section>
 
-      {/* FEATURES SECTION - 3D Cards */}
-      <section className="relative py-32 bg-black">
+
+      {/* FEATURES SECTION  */}
+      <section className="relative py-32 bg-gradient-to-br from-gray-900 via-purple-900/50 to-gray-900">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-20 fade-in-up">
+          <div className="text-center mb-16">
             <h2 className="text-5xl md:text-6xl font-black text-white mb-6">
               Dịch Vụ
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400"> Đẳng Cấp</span>
             </h2>
-            <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
               Trải nghiệm công nghệ tiên tiến kết hợp chăm sóc tận tâm
             </p>
           </div>
@@ -311,56 +312,149 @@ const UltimatePetHome = () => {
           <div className="grid md:grid-cols-3 gap-8">
             {[
               {
-                icon: <FaShoppingCart className="text-5xl" />,
+                icon: <FaShoppingCart className="text-3xl text-white" />,
                 title: 'Sản Phẩm Premium',
-                desc: 'Hơn 500+ sản phẩm chất lượng cao từ các thương hiệu hàng đầu thế giới',
+                desc: 'Hơn 500+ sản phẩm chất lượng cao từ các thương hiệu hàng đầu thế giới.',
+                // Màu nền và gradient cho thẻ hồng
+                cardBg: 'bg-gradient-to-br from-pink-900/20 via-pink-800/10 to-rose-900/20',
                 gradient: 'from-pink-500 to-rose-500',
-                image: 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=600&q=80',
+                borderColor: 'border-pink-400/40',
+                textColor: 'text-pink-300',
+                descColor: 'text-pink-200/90',
+                btnGradient: 'from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500',
+                btnShadow: 'shadow-pink-500/40',
+                glowColor: 'bg-pink-500/10',
+                image: 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=800&q=80',
+                circleColor: 'bg-yellow-500',
+                circleBorder: 'border-yellow-300/80',
               },
               {
-                icon: <FaCut className="text-5xl" />,
+                icon: <FaCut className="text-3xl text-white" />,
                 title: 'Spa & Grooming',
-                desc: 'Dịch vụ spa 5 sao với đội ngũ chuyên gia giàu kinh nghiệm',
+                desc: 'Dịch vụ spa 5 sao với đội ngũ chuyên gia giàu kinh nghiệm.',
+                // Màu nền và gradient cho thẻ tím
+                cardBg: 'bg-gradient-to-br from-purple-900/20 via-purple-800/10 to-indigo-900/20',
                 gradient: 'from-purple-500 to-indigo-500',
-                image: 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=600&q=80',
+                borderColor: 'border-purple-400/40',
+                textColor: 'text-purple-300',
+                descColor: 'text-purple-200/90',
+                btnGradient: 'from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500',
+                btnShadow: 'shadow-purple-500/40',
+                glowColor: 'bg-purple-500/10',
+                image: 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=800&q=80',
+                circleColor: 'bg-teal-500',
+                circleBorder: 'border-teal-300/80',
               },
               {
-                icon: <FaCalendarAlt className="text-5xl" />,
+                icon: <FaCalendarAlt className="text-3xl text-white" />,
                 title: 'Đặt Lịch Thông Minh',
-                desc: 'Hệ thống AI tự động sắp xếp lịch hẹn tối ưu cho bạn',
+                desc: 'Hệ thống AI tự động sắp xếp lịch hẹn tối ưu cho bạn.',
+                // Màu nền và gradient cho thẻ xanh
+                cardBg: 'bg-gradient-to-br from-blue-900/20 via-blue-800/10 to-cyan-900/20',
                 gradient: 'from-blue-500 to-cyan-500',
-                image: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=600&q=80',
+                borderColor: 'border-blue-400/40',
+                textColor: 'text-blue-300',
+                descColor: 'text-blue-200/90',
+                btnGradient: 'from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500',
+                btnShadow: 'shadow-blue-500/40',
+                glowColor: 'bg-blue-500/10',
+                image: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=800&q=80',
+                circleColor: 'bg-orange-500',
+                circleBorder: 'border-orange-300/80',
               },
             ].map((feature, index) => (
               <div
                 key={index}
-                className="group relative overflow-hidden rounded-3xl card-hover"
-                style={{ animationDelay: `${index * 0.2}s` }}
+                className="group relative transform transition-all duration-300 hover:scale-105"
               >
-                {/* Background Image */}
-                <div className="absolute inset-0">
-                  <img
-                    src={feature.image}
-                    alt={feature.title}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                  />
-                  <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-90 group-hover:opacity-95 transition-opacity`}></div>
-                </div>
-
-                {/* Content */}
-                <div className="relative z-10 p-10 h-full flex flex-col justify-end text-white">
-                  <div className="mb-6 transform group-hover:scale-110 transition-transform">
-                    {feature.icon}
+                {/* Hiệu ứng glow xung quanh thẻ */}
+                <div className={`absolute -inset-3 rounded-3xl ${feature.glowColor} opacity-0 group-hover:opacity-100 blur-xl transition-opacity duration-300`}></div>
+                
+                {/* Thẻ chính - ĐÃ BO THÊM GÓC rounded-3xl và LOẠI BỎ overflow-hidden để hình tròn hiển thị đầy đủ */}
+                <div className={`
+                  relative ${feature.cardBg}
+                  border ${feature.borderColor} rounded-3xl 
+                  pt-16 pb-8 px-6 h-full 
+                  transition-all duration-300 
+                  group-hover:shadow-xl group-hover:shadow-current/20
+                  group-hover:border-white/50
+                `}>
+                  
+                  <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 z-50">
+                    <div className={`
+                      w-24 h-24 rounded-full 
+                      ${feature.circleColor}
+                      border-4 ${feature.circleBorder}
+                      flex items-center justify-center
+                      shadow-2xl shadow-black/50
+                      relative overflow-hidden
+                      group-hover:scale-110 group-hover:shadow-2xl group-hover:shadow-current/50
+                      transition-all duration-300
+                    `}>
+                      <div className="absolute inset-0 bg-gradient-to-br from-white/30 to-transparent opacity-30"></div>
+                      
+                      <div className="relative z-10">
+                        {feature.icon}
+                      </div>
+                      
+                      <div className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <div className="absolute inset-0 rounded-full bg-white/30 blur-sm"></div>
+                      </div>
+                    </div>
                   </div>
-                  <h3 className="text-3xl font-bold mb-4">{feature.title}</h3>
-                  <p className="text-white/90 mb-6 leading-relaxed">{feature.desc}</p>
-                  <button className="self-start px-6 py-3 bg-white/20 backdrop-blur-sm rounded-full font-semibold hover:bg-white/30 transition-all flex items-center gap-2 group-hover:gap-4">
+
+                  <div className="absolute inset-0 overflow-hidden rounded-3xl z-0">
+                    <img
+                      src={feature.image}
+                      alt={feature.title}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    />
+                    <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-80 group-hover:opacity-70 transition-opacity duration-300`}></div>
+                  </div>
+
+                  <div className="relative z-10 text-center">
+                    <h3 className={`
+                      text-2xl font-bold mb-4 ${feature.textColor} group-hover:text-white transition-colors duration-300
+                    `}>
+                      {feature.title}
+                    </h3>
+
+                    <p className={`${feature.descColor} mb-8 leading-relaxed font-medium group-hover:text-white/90 transition-colors duration-300`}>
+                      {feature.desc}
+                    </p>
+                    <button className="self-start px-6 py-3 bg-white/20 backdrop-blur-sm  flex items-center gap-2 mx-auto rounded-full font-semibold hover:bg-white/30 transition-all flex items-center gap-2 group-hover:gap-4 text-white">
                     Tìm hiểu thêm
                     <FaArrowRight className="transition-all" />
-                  </button>
+                   </button>
+                  </div>
+                  
+                  {/* Hiệu ứng góc sáng đơn giản */}
+                  <div className="absolute top-4 left-4 w-2 h-2 bg-white/50 rounded-full opacity-0 group-hover:opacity-100"></div>
+                  <div className="absolute top-4 right-4 w-2 h-2 bg-white/50 rounded-full opacity-0 group-hover:opacity-100"></div>
                 </div>
+                
+                {/* Hiệu ứng đổ bóng khi hover */}
+                <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 w-4/5 h-6 bg-black/30 blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full"></div>
               </div>
             ))}
+          </div>
+
+          {/* Nút xem tất cả dịch vụ */}
+          <div className="text-center mt-16">
+            <Link
+              to="/services"
+              className="group inline-flex items-center gap-3 px-10 py-4 
+              bg-gradient-to-r from-purple-900/40 via-pink-900/30 to-blue-900/40 
+              border-2 border-purple-400/60 rounded-full font-bold text-lg text-white 
+              hover:from-purple-900/60 hover:via-pink-900/50 hover:to-blue-900/60 
+              hover:border-purple-300 hover:shadow-2xl hover:shadow-purple-500/40 
+              transition-all duration-300 hover:scale-105"
+            >
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-300 via-pink-300 to-blue-300">
+                Xem Tất Cả Dịch Vụ
+              </span>
+              <FaArrowRight className="text-sm text-purple-300 group-hover:translate-x-2 group-hover:scale-110 transition-transform" />
+            </Link>
           </div>
         </div>
       </section>
