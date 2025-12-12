@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use Illuminate\Support\Facades\Http;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Cart;
@@ -34,7 +34,7 @@ class OrderController extends Controller
     }
 
     // Tạo đơn hàng (Checkout)
-    public function store(Request $request)
+     public function store(Request $request)
     {
         $request->validate([
             'shipping_address' => 'required|string',
@@ -114,31 +114,135 @@ class OrderController extends Controller
                 ]);
 
                 // Trừ tồn kho
-                $product = Product::find($item['product_id']);
-                if ($product) {
-                    // Sử dụng DB::statement để update trực tiếp
-                    DB::statement(
-                        'UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ?',
-                        [$item['quantity'], $item['product_id']]
-                    );
-                }
+                DB::statement(
+                    'UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ?',
+                    [$item['quantity'], $item['product_id']]
+                );
             }
 
-            DB::commit();
+                  \Log::info('Payment method received:', ['method' => $request->payment_method, 'type' => gettype($request->payment_method)]);
 
-            return response()->json([
-                'message' => 'Đặt hàng thành công',
-                'order' => $order->load('items.product')
-            ], 201);
+        $paymentUrl = null;
+        
+        // ✅ Kiểm tra chính xác
+        if ($request->payment_method === 'momo' || $request->payment_method == 'momo') {
+            \Log::info('✅ MoMo method detected!');
+            $paymentUrl = $this->generateMomoPaymentUrl($order);
+            \Log::info('Generated payment_url:', ['url' => $paymentUrl, 'is_null' => is_null($paymentUrl)]);
+        } else {
+            \Log::info('❌ MoMo NOT detected. Payment method is: ' . $request->payment_method);
+        }
 
+        DB::commit();
+
+        return response()->json([
+            'order_id' => $order->id,
+            'order_number' => $order->order_number,
+            'total_amount' => $order->total_amount,
+            'payment_url' => $paymentUrl,  // ✅ Đảm bảo có dòng này
+            'message' => 'Tạo đơn hàng thành công'
+        ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('Order creation error: ' . $e->getMessage());
             return response()->json([
-                'message' => 'Có lỗi xảy ra khi đặt hàng',
+                'message' => 'Có lỗi xảy ra khi tạo đơn hàng',
                 'error' => $e->getMessage()
             ], 500);
         }
     }
+
+    private function generateMomoPaymentUrl($order)
+{
+    $endpoint = "https://test-payment.momo.vn/v2/gateway/api/create";
+    $partnerCode = "MOMO";
+    $accessKey = "F8BBA842ECF85";
+    $secretKey = "K951B6PE1waDMi640xX08PD3vg6EkVlz";
+    
+    // FIX 1: Xóa khoảng trắng thừa
+    $domain = "https://lamar-nonvenous-pudgily.ngrok-free.dev"; 
+    
+    $requestId = (string)time();
+    $orderId = (string)$order->order_number . "_" . $requestId;
+    
+    // FIX 2: Ép kiểu int để loại bỏ số thập phân
+    $amount = (string)(int)$order->total_amount;
+    
+    $orderInfo = "Thanh toan don hang #" . $order->order_number;
+    $redirectUrl = "http://localhost:5173/checkout"; 
+    $ipnUrl = $domain . "/api/momo/ipn"; 
+    $extraData = "";
+    $requestType = "captureWallet";
+
+    // Tạo chuỗi hash
+    $rawHash = "accessKey=" . $accessKey .
+               "&amount=" . $amount .
+               "&extraData=" . $extraData .
+               "&ipnUrl=" . $ipnUrl .
+               "&orderId=" . $orderId .
+               "&orderInfo=" . $orderInfo .
+               "&partnerCode=" . $partnerCode .
+               "&redirectUrl=" . $redirectUrl .
+               "&requestId=" . $requestId .
+               "&requestType=" . $requestType;
+
+    $signature = hash_hmac("sha256", $rawHash, $secretKey);
+    
+    $data = [
+        'partnerCode' => $partnerCode,
+        'partnerName' => "Test Momo",
+        'storeId' => "MomoTestStore",
+        'requestId' => $requestId,
+        'amount' => $amount,
+        'orderId' => $orderId,
+        'orderInfo' => $orderInfo,
+        'redirectUrl' => $redirectUrl,
+        'ipnUrl' => $ipnUrl,
+        'lang' => 'vi',
+        'extraData' => $extraData,
+        'requestType' => $requestType,
+        'signature' => $signature
+    ];
+
+    $response = Http::post($endpoint, $data);
+    $json = $response->json();
+
+    // Log kết quả để debug
+    \Log::info('MoMo Response:', $json);
+
+    if (isset($json['payUrl'])) {
+        return $json['payUrl'];
+    }
+    
+    \Log::error('MoMo Create Error: ' . json_encode($json));
+    return null;
+}
+    public function paymentstatus($id)
+    {
+        try {
+            $order = Order::findOrFail($id);
+            
+            // Kiểm tra xác thực
+            if ($order->customer_id !== auth()->id()) {
+                return response()->json(['message' => 'Unauthorized'], 403);
+            }
+
+            return response()->json([
+                'order_id' => $order->id,
+                'payment_status' => $order->payment_status,
+                'order_status' => $order->order_status,
+                'status' => $order->payment_status === 'completed' ? 'paid' : $order->payment_status,
+                'message' => 'Payment status retrieved'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Order not found',
+                'error' => $e->getMessage()
+            ], 404);
+        }
+    }
+   
 
     // Admin: Lấy tất cả đơn hàng
     public function adminIndex(Request $request)

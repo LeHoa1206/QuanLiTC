@@ -1,17 +1,19 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { FaCreditCard, FaMoneyBillWave, FaLock, FaCheck, FaShoppingBag, FaTruck, FaShieldAlt, FaUndo, FaArrowLeft, FaPlus, FaMapMarkerAlt } from 'react-icons/fa'
 import { useCart } from '../contexts/CartContext'
 import { useAuth } from '../contexts/AuthContext'
-import { orderService } from '../services/orderService'
 import { addressService } from '../services/addressService'
 import api from '../services/api'
 import { toast } from 'react-toastify'
+import MomoQrModal from './MomoQrModal.jsx'
 
 const UltimateCheckout = () => {
   const navigate = useNavigate()
   const { cart, getCartTotal, clearCart } = useCart()
   const { user } = useAuth()
+  
+  // State quản lý
   const [loading, setLoading] = useState(false)
   const [addresses, setAddresses] = useState([])
   const [selectedAddressId, setSelectedAddressId] = useState(null)
@@ -21,6 +23,13 @@ const UltimateCheckout = () => {
   const [wards, setWards] = useState([])
   const [loadingAddress, setLoadingAddress] = useState(false)
   
+  // State MoMo
+  const [momoModal, setMomoModal] = useState(null)
+  const [polling, setPolling] = useState(false)
+
+  // 🔴 QUAN TRỌNG: State đánh dấu đã thành công để chặn redirect về cart
+  const [isSuccess, setIsSuccess] = useState(false)
+
   const [formData, setFormData] = useState({
     shipping_address: '',
     phone: '',
@@ -48,23 +57,27 @@ const UltimateCheckout = () => {
     loadProvinces()
   }, [])
 
+  // Redirect khi cart trống (CHỈ KHI CHƯA THÀNH CÔNG)
+  useEffect(() => {
+    if (cart.length === 0 && !isSuccess) {
+      navigate('/cart')
+    }
+  }, [cart.length, navigate, isSuccess])
+
   const loadAddresses = async () => {
     try {
       const response = await api.get('/addresses')
       const addressList = Array.isArray(response.data) ? response.data : []
       setAddresses(addressList)
       
-      // Tự động chọn địa chỉ mặc định
       const defaultAddr = addressList.find(addr => addr.is_default)
       if (defaultAddr) {
         setSelectedAddressId(defaultAddr.id)
         fillFormWithAddress(defaultAddr)
       } else if (addressList.length > 0) {
-        // Nếu không có địa chỉ mặc định, chọn địa chỉ đầu tiên
         setSelectedAddressId(addressList[0].id)
         fillFormWithAddress(addressList[0])
       } else {
-        // Không có địa chỉ nào, hiển thị form thêm mới
         setShowNewAddressForm(true)
       }
     } catch (error) {
@@ -100,7 +113,7 @@ const UltimateCheckout = () => {
     setShowNewAddressForm(false)
   }
 
-  // Auto-fill user info when component mounts
+  // Auto-fill user info
   useEffect(() => {
     if (user && !selectedAddressId) {
       setFormData(prev => ({
@@ -123,72 +136,40 @@ const UltimateCheckout = () => {
     setNewAddress({ ...newAddress, [e.target.name]: e.target.value })
   }
 
+  // --- Address Handlers (Province, District, Ward) ---
   const handleProvinceChange = async (e) => {
     const provinceCode = e.target.value
     const provinceName = e.target.options[e.target.selectedIndex].text
-    
-    setNewAddress({
-      ...newAddress,
-      city_code: provinceCode,
-      city: provinceName,
-      district_code: '',
-      district: '',
-      ward_code: '',
-      ward: ''
-    })
-    
+    setNewAddress({ ...newAddress, city_code: provinceCode, city: provinceName, district_code: '', district: '', ward_code: '', ward: '' })
     setDistricts([])
     setWards([])
-    
     if (provinceCode) {
       try {
         setLoadingAddress(true)
         const data = await addressService.getDistricts(provinceCode)
         setDistricts(data)
-      } catch (error) {
-        console.error('Error loading districts:', error)
-      } finally {
-        setLoadingAddress(false)
-      }
+      } finally { setLoadingAddress(false) }
     }
   }
 
   const handleDistrictChange = async (e) => {
     const districtCode = e.target.value
     const districtName = e.target.options[e.target.selectedIndex].text
-    
-    setNewAddress({
-      ...newAddress,
-      district_code: districtCode,
-      district: districtName,
-      ward_code: '',
-      ward: ''
-    })
-    
+    setNewAddress({ ...newAddress, district_code: districtCode, district: districtName, ward_code: '', ward: '' })
     setWards([])
-    
     if (districtCode) {
       try {
         setLoadingAddress(true)
         const data = await addressService.getWards(districtCode)
         setWards(data)
-      } catch (error) {
-        console.error('Error loading wards:', error)
-      } finally {
-        setLoadingAddress(false)
-      }
+      } finally { setLoadingAddress(false) }
     }
   }
 
   const handleWardChange = (e) => {
     const wardCode = e.target.value
     const wardName = e.target.options[e.target.selectedIndex].text
-    
-    setNewAddress({
-      ...newAddress,
-      ward_code: wardCode,
-      ward: wardName
-    })
+    setNewAddress({ ...newAddress, ward_code: wardCode, ward: wardName })
   }
 
   const handleSaveNewAddress = async () => {
@@ -197,29 +178,16 @@ const UltimateCheckout = () => {
         toast.error('Vui lòng điền đầy đủ thông tin địa chỉ')
         return
       }
-
       const response = await api.post('/addresses', newAddress)
       const savedAddress = response.data.address || response.data
-      
       setAddresses([...addresses, savedAddress])
       setSelectedAddressId(savedAddress.id)
       fillFormWithAddress(savedAddress)
       setShowNewAddressForm(false)
       toast.success('Đã lưu địa chỉ mới!')
-      
-      // Reset form
       setNewAddress({
-        label: 'Home',
-        full_name: user?.name || '',
-        phone: user?.phone || '',
-        address: '',
-        ward: '',
-        ward_code: '',
-        district: '',
-        district_code: '',
-        city: '',
-        city_code: '',
-        is_default: false
+        label: 'Home', full_name: user?.name || '', phone: user?.phone || '', address: '',
+        ward: '', ward_code: '', district: '', district_code: '', city: '', city_code: '', is_default: false
       })
       setDistricts([])
       setWards([])
@@ -228,19 +196,17 @@ const UltimateCheckout = () => {
     }
   }
 
+  // --- XỬ LÝ ĐẶT HÀNG ---
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
-    // Validate
+
     if (!formData.shipping_address || !formData.phone) {
       toast.error('Vui lòng chọn địa chỉ giao hàng!')
       return
     }
 
     setLoading(true)
-
     try {
-      // Chuẩn bị items từ giỏ hàng
       const items = cart.map(item => ({
         product_id: item.id,
         quantity: item.quantity,
@@ -255,24 +221,70 @@ const UltimateCheckout = () => {
         items
       }
 
-      console.log('Order data:', orderData)
+      console.log('📦 Creating order:', orderData)
+      const response = await api.post('/orders', orderData)
+      const responseData = response.data
+      const orderId = responseData.order_id || (responseData.order ? responseData.order.id : null)
+      const orderNumber = responseData.order_number || (responseData.order ? responseData.order.order_number : orderId)
 
-      const response = await orderService.createOrder(orderData)
-      clearCart()
-      toast.success('Đặt hàng thành công! 🎉')
-      navigate('/order-success', { state: { order: response.order } })
+      console.log('✅ Order created:', orderId)
+
+      // Xử lý thanh toán
+      if (formData.payment_method === 'momo') {
+        const payUrl = responseData.payment_url || responseData.payUrl || responseData.momo_url
+        if (payUrl) {
+          // Hiện QR
+          setMomoModal({ payUrl, orderNumber, order_id: orderId, amount: getCartTotal() })
+          setPolling(true)
+        } else {
+          // Lỗi link MoMo -> Về success luôn
+          setIsSuccess(true) // 🔴 Bật cờ
+          toast.info('Đã tạo đơn. Vui lòng chờ xác nhận.')
+          clearCart()
+          navigate(`/order-success/${orderId}`)
+        }
+      } else {
+        // THANH TOÁN TIỀN MẶT / COD / KHÁC
+        setIsSuccess(true) // 🔴 Bật cờ để chặn redirect về cart
+        toast.success('🎉 Đặt hàng thành công!')
+        clearCart() // Xóa giỏ
+        // Chuyển trang (đã an toàn nhờ biến isSuccess)
+        navigate(`/order-success/${orderId}`)
+      }
     } catch (error) {
-      console.error('Order error:', error.response?.data)
-      toast.error(error.response?.data?.message || 'Đặt hàng thất bại')
+      console.error('❌ Order Error:', error)
+      toast.error(error.response?.data?.message || 'Lỗi khi tạo đơn hàng')
     } finally {
       setLoading(false)
     }
   }
 
-  if (cart.length === 0) {
-    navigate('/cart')
-    return null
-  }
+  // Polling trạng thái thanh toán MoMo
+  useEffect(() => {
+    if (!momoModal || !polling) return
+
+    const interval = setInterval(async () => {
+      try {
+        const response = await api.get(`/orders/${momoModal.order_id}/payment-status`)
+        
+        if (response.data.status === 'completed' || response.data.status === 'paid') {
+          clearInterval(interval)
+          setPolling(false)
+          setMomoModal(null)
+          
+          setIsSuccess(true) // 🔴 Bật cờ thành công
+          toast.success('Thanh toán thành công!')
+          clearCart()
+          navigate(`/order-success/${momoModal.order_id}`)
+        }
+      } catch (error) {
+        console.error('Polling error:', error)
+      }
+    }, 3000)
+
+    return () => clearInterval(interval)
+  }, [momoModal, polling, navigate, clearCart])
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 py-8 relative overflow-hidden">
@@ -709,6 +721,16 @@ const UltimateCheckout = () => {
           </div>
         </form>
       </div>
+
+      {/* Momo modal */}
+      {momoModal && (
+        <MomoQrModal
+          payUrl={momoModal.payUrl}
+          orderId={momoModal.orderNumber}
+          amount={momoModal.amount}
+          onClose={() => { setMomoModal(null); setPolling(false) }}
+        />
+      )}
     </div>
   )
 }

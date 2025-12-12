@@ -199,8 +199,7 @@ function App() {
               </div>
             } />
 
-            <Route path="/order-success" element={<UltimateOrderSuccess />} />
-
++            <Route path="/order-success/:orderId" element={<UltimateOrderSuccess />} />
             {/* Profile */}
             <Route path="/profile" element={
               <div className="flex flex-col min-h-screen">

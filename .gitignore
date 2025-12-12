@@ -30,12 +30,27 @@
 # Log files
 /backend/*.log
 /backend/logs/
-
+*.log
+Thumbs.db
 # File build và phân phối
 /backend/build/
 /backend/dist/
 *.egg-info/
 .installed.cfg
+#Hình như sai tên thư mục 
+/backend-laravel/vendor/
+/backend-laravel/.env
+/backend-laravel/storage/logs/
+/backend-laravel/.env.backup
+/backend-laravel/.phpunit.result.cache
+/backend-laravel/bootstrap/cache/packages.php
+/backend-laravel/bootstrap/cache/services.php
+# Chặn cache framework (views, sessions, cache)
+/backend-laravel/storage/framework/views/
+/backend-laravel/storage/framework/sessions/
+/backend-laravel/storage/framework/cache/
+/backend-laravel/storage/framework/testing/
+
 
 # Cache Pytest
 .pytest_cache/
