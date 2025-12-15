@@ -36,6 +36,15 @@ Route::get('/service-categories', [ServiceController::class, 'categories']);
 // Reviews (public read)
 Route::get('/reviews', [ReviewController::class, 'index']);
 
+// Voucher validation (public)
+Route::post('/vouchers/validate', [App\Http\Controllers\Admin\VoucherController::class, 'validateVoucher']);
+Route::get('/vouchers/available', [App\Http\Controllers\Admin\VoucherController::class, 'getAvailableVouchers']);
+
+// Test route
+Route::get('/test', function() {
+    return response()->json(['message' => 'Backend is working!', 'time' => now()]);
+});
+
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     // Auth
@@ -50,6 +59,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/pets/{id}', [PetController::class, 'show']);
     Route::put('/pets/{id}', [PetController::class, 'update']);
     Route::delete('/pets/{id}', [PetController::class, 'destroy']);
+
+    // Notifications
+    Route::get('/notifications', [App\Http\Controllers\NotificationController::class, 'index']);
+    Route::get('/notifications/unread-count', [App\Http\Controllers\NotificationController::class, 'getUnreadCount']);
+    Route::get('/notifications/recent', [App\Http\Controllers\NotificationController::class, 'getRecent']);
+    Route::put('/notifications/{id}/read', [App\Http\Controllers\NotificationController::class, 'markAsRead']);
+    Route::put('/notifications/mark-all-read', [App\Http\Controllers\NotificationController::class, 'markAllAsRead']);
+    Route::delete('/notifications/{id}', [App\Http\Controllers\NotificationController::class, 'destroy']);
     
     // Cart
     Route::get('/cart', [CartController::class, 'index']);
@@ -120,6 +137,17 @@ Route::middleware('auth:sanctum')->group(function () {
         
         Route::get('/statistics', [StatisticsController::class, 'index']);
         Route::put('/reviews/{id}/reply', [ReviewController::class, 'reply']);
+        
+        // Vouchers
+        Route::get('/vouchers', [App\Http\Controllers\Admin\VoucherController::class, 'index']);
+        Route::post('/vouchers', [App\Http\Controllers\Admin\VoucherController::class, 'store']);
+        Route::get('/vouchers/generate-code', [App\Http\Controllers\Admin\VoucherController::class, 'generateCode']);
+        Route::get('/vouchers/statistics', [App\Http\Controllers\Admin\VoucherController::class, 'statistics']);
+        Route::get('/vouchers/{id}', [App\Http\Controllers\Admin\VoucherController::class, 'show']);
+        Route::put('/vouchers/{id}', [App\Http\Controllers\Admin\VoucherController::class, 'update']);
+        Route::delete('/vouchers/{id}', [App\Http\Controllers\Admin\VoucherController::class, 'destroy']);
+        Route::post('/vouchers/bulk-delete', [App\Http\Controllers\Admin\VoucherController::class, 'bulkDelete']);
+        Route::post('/vouchers/{id}/toggle-status', [App\Http\Controllers\Admin\VoucherController::class, 'toggleStatus']);
     });
     
     // Staff routes

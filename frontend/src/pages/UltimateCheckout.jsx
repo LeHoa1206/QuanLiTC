@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { FaCreditCard, FaMoneyBillWave, FaLock, FaCheck, FaShoppingBag, FaTruck, FaShieldAlt, FaUndo, FaArrowLeft, FaPlus, FaMapMarkerAlt } from 'react-icons/fa'
+import { FaCreditCard, FaMoneyBillWave, FaLock, FaCheck, FaShoppingBag, FaTruck, FaShieldAlt, FaUndo, FaArrowLeft, FaPlus, FaMapMarkerAlt, FaTags, FaPercent, FaShippingFast, FaGift } from 'react-icons/fa'
 import { useCart } from '../contexts/CartContext'
 import { useAuth } from '../contexts/AuthContext'
 import { orderService } from '../services/orderService'
 import { addressService } from '../services/addressService'
+import { voucherService } from '../services/voucherService'
 import api from '../services/api'
 import { toast } from 'react-toastify'
 
@@ -20,6 +21,13 @@ const UltimateCheckout = () => {
   const [districts, setDistricts] = useState([])
   const [wards, setWards] = useState([])
   const [loadingAddress, setLoadingAddress] = useState(false)
+  
+  // Voucher state
+  const [appliedVoucher, setAppliedVoucher] = useState(null)
+  const [discount, setDiscount] = useState(0)
+  const [couponCode, setCouponCode] = useState('')
+  const [showCoupons, setShowCoupons] = useState(false)
+  const [availableVouchers, setAvailableVouchers] = useState([])
   
   const [formData, setFormData] = useState({
     shipping_address: '',
@@ -46,7 +54,99 @@ const UltimateCheckout = () => {
   useEffect(() => {
     loadAddresses()
     loadProvinces()
+    loadAvailableVouchers()
   }, [])
+
+  // Calculate discount based on voucher type
+  const calculateDiscount = (voucher, orderAmount) => {
+    if (!voucher) return 0
+    
+    let discountAmount = 0
+    switch (voucher.type) {
+      case 'percentage':
+        discountAmount = orderAmount * (voucher.value / 100)
+        break
+      case 'fixed_amount':
+        discountAmount = voucher.value
+        break
+      case 'free_shipping':
+        return 0 // Free shipping discount is handled separately
+      default:
+        return 0
+    }
+    
+    // Apply max discount limit
+    if (voucher.max_discount_amount && discountAmount > voucher.max_discount_amount) {
+      discountAmount = voucher.max_discount_amount
+    }
+    
+    return discountAmount
+  }
+
+  // Load available vouchers
+  const loadAvailableVouchers = async () => {
+    try {
+      const subtotal = getCartTotal()
+      const response = await voucherService.getAvailableVouchers(subtotal)
+      setAvailableVouchers(response.data || [])
+    } catch (error) {
+      console.error('Error loading vouchers:', error)
+      setAvailableVouchers([])
+      // Don't show error toast for voucher loading failure
+      // User can still manually enter voucher codes
+    }
+  }
+
+  // Apply voucher by code (manual input)
+  const applyVoucherByCode = async () => {
+    if (!couponCode.trim()) {
+      toast.error('Vui lòng nhập mã giảm giá')
+      return
+    }
+
+    try {
+      const response = await voucherService.validateVoucher(couponCode, getCartTotal())
+      if (response.valid) {
+        const voucher = response.voucher
+        const discountAmount = calculateDiscount(voucher, getCartTotal())
+        
+        setAppliedVoucher(voucher)
+        setDiscount(discountAmount)
+        toast.success('🎉 Áp dụng mã giảm giá thành công!')
+      } else {
+        toast.error(response.message || 'Mã giảm giá không hợp lệ')
+      }
+    } catch (error) {
+      console.error('Error validating voucher:', error)
+      toast.error('Không thể áp dụng mã giảm giá. Vui lòng thử lại!')
+    }
+  }
+
+  // Apply voucher from selection
+  const applyCoupon = (coupon) => {
+    const discountAmount = calculateDiscount(coupon, getCartTotal())
+    setAppliedVoucher(coupon)
+    setDiscount(discountAmount)
+    setCouponCode(coupon.code)
+    setShowCoupons(false)
+    toast.success('🎉 Áp dụng mã giảm giá thành công!')
+  }
+
+  // Remove voucher
+  const removeCoupon = () => {
+    setAppliedVoucher(null)
+    setDiscount(0)
+    setCouponCode('')
+    toast.info('Đã hủy mã giảm giá')
+  }
+
+  // Update discount when cart total changes
+  useEffect(() => {
+    if (appliedVoucher) {
+      const newDiscount = calculateDiscount(appliedVoucher, getCartTotal())
+      setDiscount(newDiscount)
+    }
+  }, [cart, appliedVoucher])
 
   const loadAddresses = async () => {
     try {
@@ -252,8 +352,11 @@ const UltimateCheckout = () => {
         phone: formData.phone,
         payment_method: formData.payment_method,
         notes: formData.notes || '',
+        total_amount: getCartTotal(),  // Thêm total_amount để backend kiểm tra
+        coupon_code: appliedVoucher?.code || null,
+        discount: discount,
         items,
-        total_amount: getCartTotal()  // Thêm total_amount để backend kiểm tra
+
       }
 
       console.log('Order data:', orderData)
@@ -555,11 +658,160 @@ const UltimateCheckout = () => {
                 )}
               </div>
 
-              {/* Payment Method */}
+              {/* Voucher Section */}
               <div className="bg-white rounded-3xl p-8 shadow-xl border-2 border-purple-100 animate-fade-in" style={{animationDelay: '0.1s'}}>
                 <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
                   <span className="w-12 h-12 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center text-white text-lg shadow-lg">
                     2
+                  </span>
+                  Mã giảm giá
+                </h3>
+
+                {/* Manual Input */}
+                <div className="mb-6">
+                  <label className="text-gray-700 font-bold text-sm mb-2 block">
+                    Nhập mã giảm giá
+                  </label>
+                  <div className="flex gap-3">
+                    <input
+                      type="text"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                      placeholder="Nhập mã giảm giá"
+                      className="flex-1 px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:border-purple-400 focus:bg-white transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={applyVoucherByCode}
+                      className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold rounded-xl hover:shadow-lg transition-all hover:scale-105"
+                    >
+                      Áp dụng
+                    </button>
+                  </div>
+                </div>
+
+                {/* Applied Voucher Display */}
+                {appliedVoucher && (
+                  <div className="mb-6 p-4 bg-green-50 border-2 border-green-200 rounded-xl flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <FaCheck className="w-5 h-5 text-green-600" />
+                      <div>
+                        <p className="font-bold text-green-900">{appliedVoucher.code}</p>
+                        <p className="text-sm text-green-700">{appliedVoucher.description}</p>
+                        <p className="text-sm text-green-600 font-semibold">
+                          {appliedVoucher.type === 'free_shipping' ? 'Miễn phí vận chuyển' : `Giảm ${discount.toLocaleString('vi-VN')}đ`}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={removeCoupon}
+                      className="text-red-500 hover:text-red-700 text-sm font-semibold px-3 py-1 rounded-lg hover:bg-red-50 transition-all"
+                    >
+                      Xóa
+                    </button>
+                  </div>
+                )}
+
+                {/* Available Vouchers */}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setShowCoupons(!showCoupons)}
+                    className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 rounded-xl transition-all duration-300"
+                  >
+                    <div className="flex items-center gap-2">
+                      <FaTags className="w-5 h-5 text-purple-600" />
+                      <span className="font-semibold text-gray-900">
+                        Chọn mã giảm giá khả dụng ({availableVouchers.length})
+                      </span>
+                    </div>
+                    <span className="text-purple-600 font-bold">
+                      {showCoupons ? '▲' : '▼'}
+                    </span>
+                  </button>
+
+                  {showCoupons && (
+                    <div className="mt-4 space-y-3 max-h-64 overflow-y-auto">
+                      {availableVouchers.length === 0 ? (
+                        <div className="p-6 text-center text-gray-500">
+                          <FaGift className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                          <p className="font-semibold">Không có voucher khả dụng</p>
+                          <p className="text-sm mt-1">Bạn vẫn có thể nhập mã giảm giá ở trên</p>
+                        </div>
+                      ) : (
+                        availableVouchers.map((voucher) => {
+                          const discountAmount = calculateDiscount(voucher, getCartTotal())
+                          const isSelected = appliedVoucher?.code === voucher.code
+                          
+                          return (
+                            <button
+                              key={voucher.code}
+                              type="button"
+                              onClick={() => applyCoupon(voucher)}
+                              disabled={isSelected}
+                              className={`w-full p-4 border-2 rounded-xl text-left transition-all duration-300 ${
+                                isSelected
+                                  ? 'border-green-500 bg-green-50'
+                                  : 'border-purple-200 hover:border-purple-400 bg-white hover:bg-purple-50'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <p className="font-bold text-purple-900 text-lg">{voucher.code}</p>
+                                    {voucher.type === 'percentage' && (
+                                      <FaPercent className="w-4 h-4 text-purple-600" />
+                                    )}
+                                    {voucher.type === 'fixed_amount' && (
+                                      <FaMoneyBillWave className="w-4 h-4 text-green-600" />
+                                    )}
+                                    {voucher.type === 'free_shipping' && (
+                                      <FaShippingFast className="w-4 h-4 text-blue-600" />
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-gray-600 mb-2">{voucher.description}</p>
+                                  {voucher.min_order_amount > 0 && (
+                                    <p className="text-xs text-gray-500">
+                                      Đơn tối thiểu: {voucher.min_order_amount.toLocaleString('vi-VN')}đ
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="text-right ml-4">
+                                  {voucher.type === 'percentage' && (
+                                    <div>
+                                      <p className="text-2xl font-black text-purple-600">-{voucher.value}%</p>
+                                      <p className="text-sm text-gray-600">≈ {discountAmount.toLocaleString('vi-VN')}đ</p>
+                                    </div>
+                                  )}
+                                  {voucher.type === 'fixed_amount' && (
+                                    <p className="text-2xl font-black text-green-600">-{voucher.value.toLocaleString('vi-VN')}đ</p>
+                                  )}
+                                  {voucher.type === 'free_shipping' && (
+                                    <p className="text-lg font-black text-blue-600">FREESHIP</p>
+                                  )}
+                                </div>
+                              </div>
+                              {isSelected && (
+                                <div className="mt-2 flex items-center gap-2 text-green-600">
+                                  <FaCheck className="w-4 h-4" />
+                                  <span className="text-sm font-semibold">Đã áp dụng</span>
+                                </div>
+                              )}
+                            </button>
+                          )
+                        })
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Payment Method */}
+              <div className="bg-white rounded-3xl p-8 shadow-xl border-2 border-purple-100 animate-fade-in" style={{animationDelay: '0.2s'}}>
+                <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+                  <span className="w-12 h-12 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center text-white text-lg shadow-lg">
+                    3
                   </span>
                   Phương thức thanh toán
                 </h3>
@@ -650,17 +902,45 @@ const UltimateCheckout = () => {
                     <span>Tạm tính ({cart.length} sản phẩm):</span>
                     <span className="font-bold text-gray-800">{getCartTotal().toLocaleString('vi-VN')}đ</span>
                   </div>
+                  
+                  {appliedVoucher && (
+                    <div className="flex justify-between text-green-600">
+                      <span className="flex items-center gap-2">
+                        <FaTags className="w-4 h-4" />
+                        {appliedVoucher.type === 'percentage' && `Giảm giá (${appliedVoucher.value}%)`}
+                        {appliedVoucher.type === 'fixed_amount' && 'Giảm giá cố định'}
+                        {appliedVoucher.type === 'free_shipping' && 'Miễn phí vận chuyển'}
+                      </span>
+                      <span className="font-bold">
+                        {appliedVoucher.type === 'free_shipping' ? 'FREESHIP' : `-${discount.toLocaleString('vi-VN')}đ`}
+                      </span>
+                    </div>
+                  )}
+                  
                   <div className="flex justify-between text-gray-600">
-                    <span>Phí vận chuyển:</span>
+                    <span className="flex items-center gap-2">
+                      Phí vận chuyển
+                      {appliedVoucher?.type === 'free_shipping' && (
+                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                          Voucher
+                        </span>
+                      )}
+                    </span>
                     <span className="font-bold text-green-600">Miễn phí</span>
                   </div>
+                  
                   <div className="border-t-2 border-gray-200 pt-4">
                     <div className="flex justify-between items-center">
                       <span className="text-xl font-bold text-gray-800">Tổng cộng:</span>
                       <div className="text-right">
                         <p className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500">
-                          {getCartTotal().toLocaleString('vi-VN')}đ
+                          {Math.max(0, getCartTotal() - discount).toLocaleString('vi-VN')}đ
                         </p>
+                        {discount > 0 && (
+                          <p className="text-sm text-green-600 font-semibold">
+                            Tiết kiệm {discount.toLocaleString('vi-VN')}đ
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
