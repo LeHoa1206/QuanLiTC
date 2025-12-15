@@ -162,7 +162,7 @@ const NotificationDropdown = () => {
                 <div
                   key={notification.id}
                   className={`p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer ${
-                    !notification.is_read ? 'bg-blue-50' : ''
+                    !notification.is_read ? 'bg-purple-50 border-l-4 border-l-purple-500' : ''
                   }`}
                 >
                   <div className="flex items-start gap-3">

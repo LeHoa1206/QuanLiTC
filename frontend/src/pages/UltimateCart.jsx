@@ -11,6 +11,23 @@ const UltimateCart = () => {
   const [selectedItems, setSelectedItems] = useState([])
   const navigate = useNavigate()
 
+  // Handle quantity update with stock validation
+  const handleQuantityUpdate = (itemId, newQuantity) => {
+    const item = cart.find(cartItem => cartItem.id === itemId)
+    if (!item) return
+
+    if (newQuantity > item.stock_quantity) {
+      toast.error(`Chỉ còn ${item.stock_quantity} sản phẩm trong kho`)
+      return
+    }
+
+    if (newQuantity < 1) {
+      newQuantity = 1
+    }
+
+    updateQuantity(itemId, newQuantity)
+  }
+
   // Select all items by default when cart changes
   useEffect(() => {
     setSelectedItems(cart.map(item => item.id))
@@ -230,7 +247,7 @@ const UltimateCart = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 bg-gray-100 rounded-full p-2">
                         <button
-                          onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
+                          onClick={() => handleQuantityUpdate(item.id, item.quantity - 1)}
                           className="w-10 h-10 bg-white hover:bg-purple-100 rounded-full flex items-center justify-center transition-all shadow-md hover:shadow-lg active:scale-95"
                         >
                           <FaMinus className="text-purple-600" />
@@ -239,7 +256,7 @@ const UltimateCart = () => {
                           {item.quantity}
                         </span>
                         <button
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          onClick={() => handleQuantityUpdate(item.id, item.quantity + 1)}
                           className="w-10 h-10 bg-white hover:bg-purple-100 rounded-full flex items-center justify-center transition-all shadow-md hover:shadow-lg active:scale-95"
                         >
                           <FaPlus className="text-purple-600" />
