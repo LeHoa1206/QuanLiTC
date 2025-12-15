@@ -252,17 +252,29 @@ const UltimateCheckout = () => {
         phone: formData.phone,
         payment_method: formData.payment_method,
         notes: formData.notes || '',
-        items
+        items,
+        total_amount: getCartTotal()  // Thêm total_amount để backend kiểm tra
       }
 
       console.log('Order data:', orderData)
 
-      const response = await orderService.createOrder(orderData)
-      clearCart()
-      toast.success('Đặt hàng thành công! 🎉')
-      navigate('/order-success', { state: { order: response.order } })
+      if (formData.payment_method === 'vnpay') {
+        // Gọi API backend để tạo URL thanh toán VNPay
+        const response = await api.post('/vnpay/create', orderData)
+        if (response.data.payment_url) {
+          window.location.href = response.data.payment_url  // Redirect đến VNPay
+        } else {
+          throw new Error('Không nhận được URL thanh toán')
+        }
+      } else {
+        // Xử lý các phương thức khác (cash, bank_transfer, momo)
+        const response = await orderService.createOrder(orderData)
+        clearCart()
+        toast.success('Đặt hàng thành công! 🎉')
+        navigate('/order-success', { state: { order: response.order } })
+      }
     } catch (error) {
-      console.error('Order error:', error.response?.data)
+      console.error('Order error:', error.response?.data || error.message)
       toast.error(error.response?.data?.message || 'Đặt hàng thất bại')
     } finally {
       setLoading(false)

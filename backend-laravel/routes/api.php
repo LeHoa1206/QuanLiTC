@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\StatisticsController;
 use App\Http\Controllers\Sales\SalesDashboardController;
 use App\Http\Controllers\Staff\StaffDashboardController;
+use App\Http\Controllers\VnpayController;
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -137,3 +138,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/customers/{id}/notes', [SalesDashboardController::class, 'updateCustomerNotes']);
     });
 });
+Route::middleware('auth:api')->post('/vnpay/create', [VnpayController::class, 'create']);
+Route::get('/vnpay/return', [VnpayController::class, 'return']);  // Không auth
+Route::get('/vnpay/ipn', [VnpayController::class, 'ipn']);  // Không auth
+
