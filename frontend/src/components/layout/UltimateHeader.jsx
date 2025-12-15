@@ -8,6 +8,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useCart } from '../../contexts/CartContext'
 import { useWishlist } from '../../contexts/WishlistContext'
 import { useCompare } from '../../contexts/CompareContext'
+import NotificationDropdown from '../notifications/NotificationDropdown'
 
 const UltimateHeader = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -159,6 +160,13 @@ const UltimateHeader = () => {
                   </span>
                 )}
               </Link>
+
+              {/* Notifications - Only for authenticated users */}
+              {isAuthenticated() && (
+                <div className="relative">
+                  <NotificationDropdown />
+                </div>
+              )}
 
               {/* Cart - Enhanced */}
               <Link

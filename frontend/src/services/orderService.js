@@ -8,6 +8,8 @@ export const orderService = {
       phone: orderData.phone,
       payment_method: orderData.payment_method,
       notes: orderData.notes,
+      coupon_code: orderData.coupon_code,
+      discount: orderData.discount,
       items: orderData.items, // Thêm items từ giỏ hàng
     })
     return response.data
