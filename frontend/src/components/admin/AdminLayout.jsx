@@ -4,9 +4,10 @@ import { useAuth } from '../../contexts/AuthContext'
 import { 
   FaTachometerAlt, FaBoxes, FaShoppingCart, FaUsers, 
   FaChartLine, FaTags, FaBell, FaCog, FaSignOutAlt,
-  FaBars, FaTimes, FaHome, FaStore, FaComments
+  FaBars, FaTimes, FaHome, FaStore, FaComments, FaGift
 } from 'react-icons/fa'
 import { toast } from 'react-hot-toast'
+import NotificationDropdown from '../notifications/NotificationDropdown'
 
 const AdminLayout = () => {
   const { user, logout } = useAuth()
@@ -25,9 +26,8 @@ const AdminLayout = () => {
     { path: '/admin/products', icon: FaBoxes, label: 'Sản Phẩm' },
     { path: '/admin/orders', icon: FaShoppingCart, label: 'Đơn Hàng' },
     { path: '/admin/users', icon: FaUsers, label: 'Người Dùng' },
+    { path: '/admin/vouchers', icon: FaGift, label: 'Mã Voucher' },
     { path: '/admin/chat', icon: FaComments, label: 'Chat Hỗ Trợ' },
-    { path: '/admin/sellers', icon: FaStore, label: 'Người Bán', badge: 'new' },
-    { path: '/admin/stats', icon: FaChartLine, label: 'Thống Kê' },
     { path: '/admin/coupons', icon: FaTags, label: 'Mã Giảm Giá' },
   ]
 
@@ -144,12 +144,8 @@ const AdminLayout = () => {
           </div>
 
           <div className="flex items-center space-x-4">
-            <button className="relative w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-xl flex items-center justify-center text-gray-600 transition-colors">
-              <FaBell className="text-xl" />
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
-                3
-              </span>
-            </button>
+            {/* Notification Dropdown */}
+            <NotificationDropdown />
             
             <button className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-xl flex items-center justify-center text-gray-600 transition-colors">
               <FaCog className="text-xl" />

@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import { toast } from 'react-toastify'
+import { useAuth } from './AuthContext'
 
 const CompareContext = createContext()
 
@@ -14,19 +15,29 @@ export const useCompare = () => {
 export const CompareProvider = ({ children }) => {
   const [compareList, setCompareList] = useState([])
   const MAX_COMPARE = 4 // Tối đa 4 sản phẩm để so sánh
+  const { user } = useAuth()
 
-  // Load from localStorage
+  // Get storage key based on user
+  const getStorageKey = () => {
+    return user ? `compareList_user_${user.id}` : 'compareList_guest'
+  }
+
+  // Load from localStorage when user changes
   useEffect(() => {
-    const saved = localStorage.getItem('compareList')
+    const storageKey = getStorageKey()
+    const saved = localStorage.getItem(storageKey)
     if (saved) {
       setCompareList(JSON.parse(saved))
+    } else {
+      setCompareList([]) // Clear compare list if no data for this user
     }
-  }, [])
+  }, [user])
 
   // Save to localStorage
   useEffect(() => {
-    localStorage.setItem('compareList', JSON.stringify(compareList))
-  }, [compareList])
+    const storageKey = getStorageKey()
+    localStorage.setItem(storageKey, JSON.stringify(compareList))
+  }, [compareList, user])
 
   const addToCompare = (product) => {
     if (compareList.find(item => item.id === product.id)) {
@@ -54,6 +65,9 @@ export const CompareProvider = ({ children }) => {
 
   const clearCompare = () => {
     setCompareList([])
+    // Also clear from localStorage
+    const storageKey = getStorageKey()
+    localStorage.removeItem(storageKey)
     toast.success('Đã xóa toàn bộ danh sách so sánh!')
   }
 

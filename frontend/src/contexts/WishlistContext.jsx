@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import { toast } from 'react-toastify'
+import { useAuth } from './AuthContext'
 
 const WishlistContext = createContext()
 
@@ -13,19 +14,29 @@ export const useWishlist = () => {
 
 export const WishlistProvider = ({ children }) => {
   const [wishlist, setWishlist] = useState([])
+  const { user } = useAuth()
 
-  // Load wishlist from localStorage
+  // Get storage key based on user
+  const getStorageKey = () => {
+    return user ? `wishlist_user_${user.id}` : 'wishlist_guest'
+  }
+
+  // Load wishlist from localStorage when user changes
   useEffect(() => {
-    const saved = localStorage.getItem('wishlist')
+    const storageKey = getStorageKey()
+    const saved = localStorage.getItem(storageKey)
     if (saved) {
       setWishlist(JSON.parse(saved))
+    } else {
+      setWishlist([]) // Clear wishlist if no data for this user
     }
-  }, [])
+  }, [user])
 
   // Save to localStorage whenever wishlist changes
   useEffect(() => {
-    localStorage.setItem('wishlist', JSON.stringify(wishlist))
-  }, [wishlist])
+    const storageKey = getStorageKey()
+    localStorage.setItem(storageKey, JSON.stringify(wishlist))
+  }, [wishlist, user])
 
   const addToWishlist = (product) => {
     if (wishlist.find(item => item.id === product.id)) {
@@ -47,6 +58,9 @@ export const WishlistProvider = ({ children }) => {
 
   const clearWishlist = () => {
     setWishlist([])
+    // Also clear from localStorage
+    const storageKey = getStorageKey()
+    localStorage.removeItem(storageKey)
     toast.success('Đã xóa toàn bộ danh sách yêu thích!')
   }
 

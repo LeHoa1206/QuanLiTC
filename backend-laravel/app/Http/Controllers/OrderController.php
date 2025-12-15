@@ -6,6 +6,8 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Cart;
 use App\Models\Product;
+use App\Models\Voucher;
+use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -41,6 +43,8 @@ class OrderController extends Controller
             'phone' => 'required|string|max:20',
             'payment_method' => 'required|in:cash,bank_transfer,vnpay,momo',
             'notes' => 'nullable|string',
+            'coupon_code' => 'nullable|string',
+            'discount' => 'nullable|numeric|min:0',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
@@ -49,12 +53,16 @@ class OrderController extends Controller
 
         $user = $request->user();
         $items = $request->items;
+        $couponCode = $request->coupon_code;
+        $discount = $request->discount ?? 0;
 
         // Debug log
         \Log::info('Order Request Data:', [
             'items' => $items,
             'shipping_address' => $request->shipping_address,
             'phone' => $request->phone,
+            'coupon_code' => $couponCode,
+            'discount' => $discount,
         ]);
 
         if (empty($items)) {
@@ -86,13 +94,38 @@ class OrderController extends Controller
                 $totalAmount += $item['price'] * $item['quantity'];
             }
 
+            // Kiểm tra và validate voucher nếu có
+            $voucher = null;
+            if ($couponCode) {
+                $voucher = Voucher::where('code', $couponCode)
+                    ->where('status', 'active')
+                    ->first();
+                
+                if (!$voucher) {
+                    return response()->json([
+                        'message' => 'Mã giảm giá không hợp lệ'
+                    ], 400);
+                }
+
+                // Kiểm tra usage limit
+                if ($voucher->usage_limit && ($voucher->used_count ?? 0) >= $voucher->usage_limit) {
+                    return response()->json([
+                        'message' => 'Mã giảm giá đã hết lượt sử dụng'
+                    ], 400);
+                }
+            }
+
+            // Tính tổng tiền sau khi giảm giá
+            $finalTotal = max(0, $totalAmount - $discount);
+
             // Tạo đơn hàng
             $order = Order::create([
                 'customer_id' => $user->id,
                 'order_number' => Order::generateOrderNumber(),
                 'subtotal' => $totalAmount,
-                'discount_amount' => 0,
-                'total_amount' => $totalAmount,
+                'discount_amount' => $discount,
+                'total_amount' => $finalTotal,
+                'voucher_code' => $couponCode,
                 'payment_method' => $request->payment_method,
                 'payment_status' => 'pending',
                 'order_status' => 'pending',
@@ -122,6 +155,34 @@ class OrderController extends Controller
                         [$item['quantity'], $item['product_id']]
                     );
                 }
+            }
+
+            // Cập nhật số lần sử dụng voucher
+            if ($voucher) {
+                $voucher->increment('used_count');
+            }
+
+            // Tạo thông báo (không ảnh hưởng đến việc tạo đơn hàng)
+            try {
+                // Tạo thông báo cho admin khi có đơn hàng mới
+                Notification::createForAdmins(
+                    'order',
+                    'Đơn hàng mới #' . $order->order_number,
+                    'Khách hàng ' . $user->name . ' vừa đặt đơn hàng mới với tổng tiền ' . number_format($finalTotal) . 'đ',
+                    '/admin/orders'
+                );
+
+                // Tạo thông báo cho khách hàng xác nhận đơn hàng
+                Notification::createForUser(
+                    $user->id,
+                    'order',
+                    'Đặt hàng thành công',
+                    'Đơn hàng #' . $order->order_number . ' của bạn đã được tạo thành công. Chúng tôi sẽ xử lý đơn hàng trong thời gian sớm nhất.',
+                    '/orders'
+                );
+            } catch (\Exception $notificationError) {
+                // Log lỗi notification nhưng không ảnh hưởng đến đơn hàng
+                \Log::error('Notification error: ' . $notificationError->getMessage());
             }
 
             DB::commit();
@@ -180,8 +241,38 @@ class OrderController extends Controller
             'status' => 'required|in:pending,confirmed,processing,delivered,cancelled'
         ]);
         
-        $order = Order::findOrFail($id);
-        $order->update(['order_status' => $request->status]);
+        $order = Order::with('customer')->findOrFail($id);
+        $oldStatus = $order->order_status;
+        $newStatus = $request->status;
+        
+        $order->update(['order_status' => $newStatus]);
+        
+        // Tạo thông báo cho khách hàng khi trạng thái thay đổi
+        if ($oldStatus !== $newStatus && $order->customer) {
+            try {
+                $statusMessages = [
+                    'pending' => 'Đơn hàng đang chờ xác nhận',
+                    'confirmed' => 'Đơn hàng đã được xác nhận và đang chuẩn bị',
+                    'processing' => 'Đơn hàng đang được xử lý',
+                    'delivered' => 'Đơn hàng đã được giao thành công',
+                    'cancelled' => 'Đơn hàng đã bị hủy'
+                ];
+
+                $title = 'Cập nhật đơn hàng #' . $order->order_number;
+                $content = $statusMessages[$newStatus] ?? 'Trạng thái đơn hàng đã được cập nhật';
+
+                Notification::createForUser(
+                    $order->customer->id,
+                    'order',
+                    $title,
+                    $content,
+                    '/orders'
+                );
+            } catch (\Exception $notificationError) {
+                // Log lỗi notification nhưng không ảnh hưởng đến cập nhật trạng thái
+                \Log::error('Notification error: ' . $notificationError->getMessage());
+            }
+        }
         
         return response()->json([
             'message' => 'Cập nhật trạng thái thành công',

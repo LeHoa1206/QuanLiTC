@@ -254,15 +254,22 @@ const OrderSuccess = () => {
               <span>Phí vận chuyển</span>
               <span>{formatPrice(order.shipping_fee || 0)}</span>
             </div>
-            {order.discount > 0 && (
+            {order.discount_amount > 0 && (
               <div className="flex justify-between text-green-600">
-                <span>Giảm giá</span>
-                <span>-{formatPrice(order.discount)}</span>
+                <span className="flex items-center gap-2">
+                  Giảm giá
+                  {order.voucher_code && (
+                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                      {order.voucher_code}
+                    </span>
+                  )}
+                </span>
+                <span>-{formatPrice(order.discount_amount)}</span>
               </div>
             )}
             <div className="flex justify-between text-xl font-bold text-gray-900 pt-2">
               <span>Tổng cộng</span>
-              <span className="text-purple-600">{formatPrice(order.total)}</span>
+              <span className="text-purple-600">{formatPrice(order.total_amount || order.total)}</span>
             </div>
           </div>
         </div>

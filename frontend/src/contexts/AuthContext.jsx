@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import { STORAGE_KEYS } from '../utils/constants'
+import { cleanupUserData, migrateGuestDataToUser } from '../utils/storageUtils'
 
 const AuthContext = createContext(null)
 
@@ -45,6 +46,9 @@ export const AuthProvider = ({ children }) => {
     console.log('🔐 AuthContext.login() called with:', userData);
     console.log('🔑 Token:', token);
     
+    // Migrate guest data to user data if exists
+    migrateGuestDataToUser(userData.id)
+    
     setUser(userData)
     localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userData))
     localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token)
@@ -55,18 +59,14 @@ export const AuthProvider = ({ children }) => {
   }
 
   const logout = () => {
-    // Xóa giỏ hàng của user hiện tại
-    if (user?.id) {
-      const userCartKey = `${STORAGE_KEYS.CART}_user_${user.id}`
-      localStorage.removeItem(userCartKey)
-    }
-    
+    // Clean up user data (but keep it for when they login again)
+    // Only remove auth tokens
     setUser(null)
     localStorage.removeItem(STORAGE_KEYS.USER_DATA)
     localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN)
     
-    // Xóa guest cart nếu có
-    localStorage.removeItem(STORAGE_KEYS.CART)
+    // Note: We don't remove user-specific data (cart, wishlist, compare)
+    // so they can access it when they login again
   }
 
   const updateUser = (userData) => {

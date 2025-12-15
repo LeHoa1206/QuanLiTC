@@ -14,12 +14,15 @@ import {
   FaPlus,
   FaEdit,
   FaTrash,
-  FaMapMarkerAlt
+  FaMapMarkerAlt,
+  FaShippingFast
 } from 'react-icons/fa';
 import { SiVisa, SiMastercard } from 'react-icons/si';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
+
 import { orderService } from '../services/orderService';
+import { voucherService } from '../services/voucherService';
 import { toast } from 'react-toastify';
 
 const Checkout = () => {
@@ -27,6 +30,7 @@ const Checkout = () => {
   const location = useLocation();
   const { user, loading: authLoading, isAuthenticated } = useAuth();
   const { cartItems, getCartTotal, clearCart } = useCart();
+
   
   // Bắt buộc đăng nhập để thanh toán
   useEffect(() => {
@@ -40,12 +44,15 @@ const Checkout = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState('cod');
   const [couponCode, setCouponCode] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [showCoupons, setShowCoupons] = useState(false);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [isEditingAddress, setIsEditingAddress] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Voucher state
+  const [appliedVoucher, setAppliedVoucher] = useState(null);
+  const [discount, setDiscount] = useState(0);
 
   // Sample saved addresses (in real app, this would come from user data)
   const [savedAddresses, setSavedAddresses] = useState([
@@ -102,29 +109,106 @@ const Checkout = () => {
     cvv: '',
   });
 
-  // Available discount coupons
-  const availableCoupons = [
-    { code: 'SAVE10', discount: 10, description: 'Giảm 10% cho đơn hàng' },
-    { code: 'SAVE20', discount: 20, description: 'Giảm 20% cho đơn hàng trên $500' },
-    { code: 'FREESHIP', discount: 0, freeShipping: true, description: 'Miễn phí vận chuyển' },
-    { code: 'VIP30', discount: 30, description: 'Giảm 30% cho khách VIP' },
-  ];
+  // Available vouchers from API
+  const [availableVouchers, setAvailableVouchers] = useState([]);
+
+  // Calculate discount based on voucher type
+  const calculateDiscount = (voucher, orderAmount) => {
+    if (!voucher) return 0;
+    
+    let discountAmount = 0;
+    switch (voucher.type) {
+      case 'percentage':
+        discountAmount = orderAmount * (voucher.value / 100);
+        break;
+      case 'fixed_amount':
+        discountAmount = voucher.value;
+        break;
+      case 'free_shipping':
+        return 0; // Free shipping discount is handled separately
+      default:
+        return 0;
+    }
+    
+    // Apply max discount limit
+    if (voucher.max_discount_amount && discountAmount > voucher.max_discount_amount) {
+      discountAmount = voucher.max_discount_amount;
+    }
+    
+    return discountAmount;
+  };
+
+  // Load available vouchers
+  const loadAvailableVouchers = async () => {
+    try {
+      const response = await voucherService.getAvailableVouchers(subtotal);
+      setAvailableVouchers(response.data || []);
+    } catch (error) {
+      console.error('Error loading vouchers:', error);
+      // Set empty array on error
+      setAvailableVouchers([]);
+    }
+  };
+
+  // Apply voucher by code (manual input)
+  const applyVoucherByCode = async () => {
+    if (!couponCode.trim()) {
+      toast.error('Vui lòng nhập mã giảm giá');
+      return;
+    }
+
+    try {
+      const response = await voucherService.validateVoucher(couponCode, subtotal);
+      if (response.valid) {
+        const voucher = response.voucher;
+        const discountAmount = calculateDiscount(voucher, subtotal);
+        
+        setAppliedVoucher(voucher);
+        setDiscount(discountAmount);
+        toast.success('🎉 Áp dụng mã giảm giá thành công!');
+      } else {
+        toast.error(response.message || 'Mã giảm giá không hợp lệ');
+      }
+    } catch (error) {
+      console.error('Error validating voucher:', error);
+      toast.error('Không thể áp dụng mã giảm giá. Vui lòng thử lại!');
+    }
+  };
 
   // Use cartItems from useCart (no mock data)
   const subtotal = getCartTotal();
-  const discount = appliedCoupon ? (subtotal * appliedCoupon.discount / 100) : 0;
-  const shipping = subtotal > 5000000 ? 0 : 30000; // Free shipping over 5M VND
+  
+  // Calculate shipping fee (free if over 5M VND or free shipping voucher applied)
+  const baseShipping = subtotal > 5000000 ? 0 : 30000;
+  const isFreeShipping = appliedVoucher?.type === 'free_shipping';
+  const shipping = isFreeShipping ? 0 : baseShipping;
+  
   const total = subtotal - discount + shipping;
 
+  // Update discount when subtotal changes
+  useEffect(() => {
+    if (appliedVoucher) {
+      const newDiscount = calculateDiscount(appliedVoucher, subtotal);
+      setDiscount(newDiscount);
+    }
+  }, [subtotal, appliedVoucher]);
+
+
+
   const applyCoupon = (coupon) => {
-    setAppliedCoupon(coupon);
+    const discountAmount = calculateDiscount(coupon, subtotal);
+    setAppliedVoucher(coupon);
+    setDiscount(discountAmount);
     setCouponCode(coupon.code);
     setShowCoupons(false);
+    toast.success('🎉 Áp dụng mã giảm giá thành công!');
   };
 
   const removeCoupon = () => {
-    setAppliedCoupon(null);
+    setAppliedVoucher(null);
+    setDiscount(0);
     setCouponCode('');
+    toast.info('Đã hủy mã giảm giá');
   };
 
   // Auto-fill user info when logged in
@@ -156,6 +240,14 @@ const Checkout = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  // Load available vouchers when subtotal changes
+  useEffect(() => {
+    if (subtotal > 0) {
+      loadAvailableVouchers();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subtotal]);
 
   // Select an address
   const selectAddress = (address) => {
@@ -267,8 +359,8 @@ const Checkout = () => {
 
       // Prepare order data
       const subtotal = getCartTotal();
-      const shipping = subtotal > 5000000 ? 0 : 30000;
-      const discount = appliedCoupon ? (subtotal * appliedCoupon.discount / 100) : 0;
+      const baseShipping = subtotal > 5000000 ? 0 : 30000;
+      const shipping = isFreeShipping ? 0 : baseShipping;
       const total = subtotal + shipping - discount;
 
       const orderData = {
@@ -303,7 +395,7 @@ const Checkout = () => {
           postal_code: selectedAddress.zipCode
         },
         payment_method: paymentMethod,
-        coupon_code: appliedCoupon?.code || null,
+        coupon_code: appliedVoucher?.code || null,
         subtotal,
         shipping_fee: shipping,
         tax: 0,
@@ -826,20 +918,20 @@ const Checkout = () => {
                   <div className="flex items-center gap-2">
                     <FaTags className="w-5 h-5 text-purple-600" />
                     <span className="font-semibold text-gray-900">
-                      {appliedCoupon ? 'Đã áp dụng mã giảm giá' : 'Chọn mã giảm giá'}
+                      {appliedVoucher ? 'Đã áp dụng mã giảm giá' : 'Chọn mã giảm giá'}
                     </span>
                   </div>
                   <FaPercent className="w-4 h-4 text-purple-600" />
                 </button>
 
                 {/* Applied Coupon Display */}
-                {appliedCoupon && (
+                {appliedVoucher && (
                   <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-xl flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <FaCheck className="w-4 h-4 text-green-600" />
                       <div>
-                        <p className="font-bold text-green-900">{appliedCoupon.code}</p>
-                        <p className="text-xs text-green-700">{appliedCoupon.description}</p>
+                        <p className="font-bold text-green-900">{appliedVoucher.code}</p>
+                        <p className="text-xs text-green-700">{appliedVoucher.description}</p>
                       </div>
                     </div>
                     <button
@@ -851,33 +943,82 @@ const Checkout = () => {
                   </div>
                 )}
 
-                {/* Coupon Selection */}
+                {/* Voucher Selection */}
                 {showCoupons && (
                   <div className="mt-3 space-y-2 max-h-64 overflow-y-auto">
-                    {availableCoupons.map((coupon) => (
-                      <button
-                        key={coupon.code}
-                        onClick={() => applyCoupon(coupon)}
-                        disabled={appliedCoupon?.code === coupon.code}
-                        className={`w-full p-3 border-2 rounded-xl text-left transition-all duration-300 ${
-                          appliedCoupon?.code === coupon.code
-                            ? 'border-green-500 bg-green-50'
-                            : 'border-purple-200 hover:border-purple-400 bg-white hover:bg-purple-50'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-bold text-purple-900">{coupon.code}</p>
-                            <p className="text-sm text-gray-600">{coupon.description}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-2xl font-black text-purple-600">
-                              {coupon.discount > 0 ? `-${coupon.discount}%` : 'FREE'}
-                            </p>
-                          </div>
-                        </div>
-                      </button>
-                    ))}
+                    {availableVouchers.length === 0 ? (
+                      <div className="p-4 text-center text-gray-500">
+                        <FaTags className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                        <p>Không có voucher khả dụng cho đơn hàng này</p>
+                        <p className="text-sm mt-1">Thêm sản phẩm để mở khóa voucher</p>
+                      </div>
+                    ) : (
+                      availableVouchers.map((voucher) => {
+                        const discountAmount = calculateDiscount(voucher, subtotal);
+                        const isSelected = appliedVoucher?.code === voucher.code;
+                        
+                        return (
+                          <button
+                            key={voucher.code}
+                            onClick={() => applyCoupon(voucher)}
+                            disabled={isSelected}
+                            className={`w-full p-4 border-2 rounded-xl text-left transition-all duration-300 ${
+                              isSelected
+                                ? 'border-green-500 bg-green-50'
+                                : 'border-purple-200 hover:border-purple-400 bg-white hover:bg-purple-50'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <p className="font-bold text-purple-900 text-lg">{voucher.code}</p>
+                                  {voucher.type === 'percentage' && (
+                                    <FaPercent className="w-4 h-4 text-purple-600" />
+                                  )}
+                                  {voucher.type === 'fixed_amount' && (
+                                    <FaMoneyBillWave className="w-4 h-4 text-green-600" />
+                                  )}
+                                  {voucher.type === 'free_shipping' && (
+                                    <FaShippingFast className="w-4 h-4 text-blue-600" />
+                                  )}
+                                </div>
+                                <p className="text-sm text-gray-600 mb-2">{voucher.description}</p>
+                                {voucher.min_order_amount > 0 && (
+                                  <p className="text-xs text-gray-500">
+                                    Đơn tối thiểu: {formatPrice(voucher.min_order_amount)}
+                                  </p>
+                                )}
+                                {voucher.max_discount_amount && (
+                                  <p className="text-xs text-gray-500">
+                                    Giảm tối đa: {formatPrice(voucher.max_discount_amount)}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="text-right ml-4">
+                                {voucher.type === 'percentage' && (
+                                  <div>
+                                    <p className="text-2xl font-black text-purple-600">-{voucher.value}%</p>
+                                    <p className="text-sm text-gray-600">≈ {formatPrice(discountAmount)}</p>
+                                  </div>
+                                )}
+                                {voucher.type === 'fixed_amount' && (
+                                  <p className="text-2xl font-black text-green-600">-{formatPrice(voucher.value)}</p>
+                                )}
+                                {voucher.type === 'free_shipping' && (
+                                  <p className="text-lg font-black text-blue-600">FREESHIP</p>
+                                )}
+                              </div>
+                            </div>
+                            {isSelected && (
+                              <div className="mt-2 flex items-center gap-2 text-green-600">
+                                <FaCheck className="w-4 h-4" />
+                                <span className="text-sm font-semibold">Đã áp dụng</span>
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })
+                    )}
                   </div>
                 )}
               </div>
@@ -888,17 +1029,28 @@ const Checkout = () => {
                   <span>Tạm tính</span>
                   <span className="font-semibold">{formatPrice(subtotal)}</span>
                 </div>
-                {discount > 0 && (
+                {appliedVoucher && (
                   <div className="flex justify-between text-green-600">
                     <span className="flex items-center gap-2">
                       <FaTags className="w-4 h-4" />
-                      Giảm giá ({appliedCoupon?.discount}%)
+                      {appliedVoucher.type === 'percentage' && `Giảm giá (${appliedVoucher.value}%)`}
+                      {appliedVoucher.type === 'fixed_amount' && 'Giảm giá cố định'}
+                      {appliedVoucher.type === 'free_shipping' && 'Miễn phí vận chuyển'}
                     </span>
-                    <span className="font-bold">-{formatPrice(discount)}</span>
+                    <span className="font-bold">
+                      {appliedVoucher.type === 'free_shipping' ? 'FREESHIP' : `-${formatPrice(discount)}`}
+                    </span>
                   </div>
                 )}
                 <div className="flex justify-between text-gray-600">
-                  <span>Phí vận chuyển</span>
+                  <span className="flex items-center gap-2">
+                    Phí vận chuyển
+                    {appliedVoucher?.type === 'free_shipping' && (
+                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                        Voucher
+                      </span>
+                    )}
+                  </span>
                   <span className="font-semibold text-green-600">
                     {shipping === 0 ? 'MIỄN PHÍ' : formatPrice(shipping)}
                   </span>
