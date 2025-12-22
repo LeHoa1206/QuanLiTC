@@ -25,12 +25,15 @@ const UltimateCheckout = () => {
   const [loadingAddress, setLoadingAddress] = useState(false)
   
 
+
   // State MoMo
   const [momoModal, setMomoModal] = useState(null)
   const [polling, setPolling] = useState(false)
 
   // 🔴 QUAN TRỌNG: State đánh dấu đã thành công để chặn redirect về cart
   const [isSuccess, setIsSuccess] = useState(false)
+
+
 
 
   // Voucher state
@@ -76,6 +79,7 @@ const UltimateCheckout = () => {
       navigate('/cart')
     }
   }, [cart.length, navigate, isSuccess])
+
 
   // Calculate discount based on voucher type
   const calculateDiscount = (voucher, orderAmount) => {
@@ -302,7 +306,7 @@ const UltimateCheckout = () => {
   }
 
   // --- XỬ LÝ ĐẶT HÀNG ---
-  const handleSubmit = async (e) => {
+    const handleSubmit = async (e) => {
     e.preventDefault()
 
     if (!formData.shipping_address || !formData.phone) {
@@ -323,9 +327,10 @@ const UltimateCheckout = () => {
         phone: formData.phone,
         payment_method: formData.payment_method,
         notes: formData.notes || '',
+        total_amount: getCartTotal(),
         coupon_code: appliedVoucher?.code || null,
         discount: discount,
-        items
+        items,
       }
 
       console.log('📦 Creating order:', orderData)
@@ -340,32 +345,36 @@ const UltimateCheckout = () => {
       if (formData.payment_method === 'momo') {
         const payUrl = responseData.payment_url || responseData.payUrl || responseData.momo_url
         if (payUrl) {
-          // Hiện QR
           setMomoModal({ payUrl, orderNumber, order_id: orderId, amount: getCartTotal() })
           setPolling(true)
         } else {
-          // Lỗi link MoMo -> Về success luôn
-          setIsSuccess(true) // 🔴 Bật cờ
+          setIsSuccess(true)
           toast.info('Đã tạo đơn. Vui lòng chờ xác nhận.')
           clearCart()
           navigate(`/order-success/${orderId}`)
         }
+      } else if (formData.payment_method === 'vnpay') {
+        // Gọi API backend để tạo URL thanh toán VNPay
+        const response = await api.post('/vnpay/create', orderData)
+        if (response.data.payment_url) {
+          window.location.href = response.data.payment_url  // Redirect đến VNPay
+        } else {
+          throw new Error('Không nhận được URL thanh toán')
+        }
       } else {
-        // THANH TOÁN TIỀN MẶT / COD / KHÁC
-        setIsSuccess(true) // 🔴 Bật cờ để chặn redirect về cart
-        toast.success('🎉 Đặt hàng thành công!')
-        clearCart() // Xóa giỏ
-        // Chuyển trang (đã an toàn nhờ biến isSuccess)
+        // cash, bank_transfer
+        setIsSuccess(true)
+        clearCart()
+        toast.success('Đặt hàng thành công! 🎉')
         navigate(`/order-success/${orderId}`)
       }
+
     } catch (error) {
+      setLoading(false)
       console.error('❌ Order Error:', error)
       toast.error(error.response?.data?.message || 'Lỗi khi tạo đơn hàng')
-    } finally {
-      setLoading(false)
     }
   }
-
   // Polling trạng thái thanh toán MoMo
   useEffect(() => {
     if (!momoModal || !polling) return

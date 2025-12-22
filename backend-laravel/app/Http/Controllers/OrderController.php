@@ -184,6 +184,34 @@ class OrderController extends Controller
                 \Log::error('Notification error: ' . $notificationError->getMessage());
             }
 
+            // Cập nhật số lần sử dụng voucher
+            if ($voucher) {
+                $voucher->increment('used_count');
+            }
+
+            // Tạo thông báo (không ảnh hưởng đến việc tạo đơn hàng)
+            try {
+                // Tạo thông báo cho admin khi có đơn hàng mới
+                Notification::createForAdmins(
+                    'order',
+                    'Đơn hàng mới #' . $order->order_number,
+                    'Khách hàng ' . $user->name . ' vừa đặt đơn hàng mới với tổng tiền ' . number_format($finalTotal) . 'đ',
+                    '/admin/orders'
+                );
+
+                // Tạo thông báo cho khách hàng xác nhận đơn hàng
+                Notification::createForUser(
+                    $user->id,
+                    'order',
+                    'Đặt hàng thành công',
+                    'Đơn hàng #' . $order->order_number . ' của bạn đã được tạo thành công. Chúng tôi sẽ xử lý đơn hàng trong thời gian sớm nhất.',
+                    '/orders'
+                );
+            } catch (\Exception $notificationError) {
+                // Log lỗi notification nhưng không ảnh hưởng đến đơn hàng
+                \Log::error('Notification error: ' . $notificationError->getMessage());
+            }
+
             DB::commit();
 
 

@@ -56,51 +56,50 @@ const UltimateOrderSuccess = () => {
                 'Đơn hàng sẽ được giao trong 2-3 ngày làm việc',
                 'Vui lòng kiểm tra kỹ sản phẩm khi nhận hàng',
               ].map((step, index) => (
-                <li key={index} className="flex items-start gap-3 text-white/70">
-                  <div className="w-6 h-6 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <span className="text-white text-xs font-bold">{index + 1}</span>
-                  </div>
-                  {step}
-                </li>
-              ))}
-            </ul>
-          </div>
+                <li key={index} className="flex items-start gap-3 text-white/70"><div className="w-6 h-6 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-white text-xs font-bold">{index + 1}</span>
+              </div>
+              {step}
+            </li>
+          ))}
+        </ul>
+      </div>
 
-          {/* Actions */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Link
-              to="/orders"
-              className="flex-1 py-4 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white font-bold rounded-2xl transition-all hover:shadow-xl hover:scale-105 flex items-center justify-center gap-2"
-            >
-              <FaBox />
-              Xem đơn hàng
-            </Link>
-            <Link
-              to="/"
-              className="flex-1 py-4 glass hover:bg-white/10 border border-white/10 text-white font-bold rounded-2xl transition-all flex items-center justify-center gap-2"
-            >
-              <FaHome />
-              Về trang chủ
-            </Link>
-          </div>
+      {/* Actions */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <Link
+          to="/orders"
+          className="flex-1 py-4 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white font-bold rounded-2xl transition-all hover:shadow-xl hover:scale-105 flex items-center justify-center gap-2"
+        >
+          <FaBox />
+          Xem đơn hàng
+        </Link>
+        <Link
+          to="/"
+          className="flex-1 py-4 glass hover:bg-white/10 border border-white/10 text-white font-bold rounded-2xl transition-all flex items-center justify-center gap-2"
+        >
+          <FaHome />
+          Về trang chủ
+        </Link>
+      </div>
 
-          {/* Support */}
-          <div className="mt-8 pt-8 border-t border-white/10">
-            <p className="text-white/60 text-sm">
-              Cần hỗ trợ? Liên hệ:{' '}
-              <a href="tel:0123456789" className="text-purple-400 hover:text-purple-300 font-semibold">
-                0123 456 789
-              </a>
-              {' '}hoặc{' '}
-              <a href="mailto:support@petmanagement.com" className="text-purple-400 hover:text-purple-300 font-semibold">
-                support@petmanagement.com
-              </a>
-            </p>
-          </div>
-        </div>
+      {/* Support */}
+      <div className="mt-8 pt-8 border-t border-white/10">
+        <p className="text-white/60 text-sm">
+          Cần hỗ trợ? Liên hệ:{' '}
+          <a href="tel:0123456789" className="text-purple-400 hover:text-purple-300 font-semibold">
+            0123 456 789
+          </a>
+          {' '}hoặc{' '}
+          <a href="mailto:support@petmanagement.com" className="text-purple-400 hover:text-purple-300 font-semibold">
+            support@petmanagement.com
+          </a>
+        </p>
       </div>
     </div>
-  )
+  </div>
+</div>
+)
 }
 
 export default UltimateOrderSuccess
