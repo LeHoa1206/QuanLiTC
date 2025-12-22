@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { FaBox, FaClock, FaCheck, FaTimes, FaTruck, FaShoppingBag, FaReceipt, FaMapMarkerAlt, FaPhone, FaRedo } from 'react-icons/fa'
+import { FaBox, FaClock, FaCheck, FaTimes, FaTruck, FaShoppingBag, FaReceipt, FaMapMarkerAlt, FaPhone, FaRedo, FaMoneyBill, FaCheckCircle, FaClipboardList, FaHourglassHalf, FaBoxOpen, FaTimesCircle } from 'react-icons/fa'
 import { orderService } from '../services/orderService'
 import { useCart } from '../contexts/CartContext'
 import { toast } from 'react-toastify'
@@ -133,6 +133,35 @@ const UltimateOrders = () => {
     }
   }
 
+  const getProgressSteps = (status) => {
+    const steps = [
+      { label: 'Đơn hàng đã tạo', sub: 'Tạo đơn hàng', icon: FaReceipt },
+      { label: 'Đã thanh toán', sub: 'Thanh toán khách hàng', icon: FaMoneyBill },
+      { label: 'Đã giao hàng', sub: 'Đang giao', icon: FaTruck },
+      { label: 'Hoàn thành', sub: 'Đơn hàng hoàn tất', icon: FaCheckCircle },
+    ]
+
+    let currentIndex = 0
+    switch (status) {
+      case 'pending':
+        currentIndex = 0
+        break
+      case 'confirmed':
+        currentIndex = 1
+        break
+      case 'processing':
+        currentIndex = 2
+        break
+      case 'delivered':
+        currentIndex = 3
+        break
+      default:
+        currentIndex = -1
+    }
+
+    return { steps, currentIndex }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50 py-16 relative overflow-hidden">
       {/* Decorative Elements */}
@@ -141,22 +170,6 @@ const UltimateOrders = () => {
         <div className="absolute bottom-20 right-10 w-96 h-96 bg-pink-200/30 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
         <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-purple-200/30 rounded-full blur-3xl animate-pulse" style={{animationDelay: '2s'}}></div>
       </div>
-
-      {/* Floating Icons */}
-      {[...Array(8)].map((_, i) => (
-        <div
-          key={i}
-          className="absolute text-4xl opacity-5 pointer-events-none"
-          style={{
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
-            animation: `float ${5 + Math.random() * 5}s ease-in-out infinite`,
-            animationDelay: `${Math.random() * 3}s`
-          }}
-        >
-          {['🐕', '🐈', '🐾', '📦', '🎁'][Math.floor(Math.random() * 5)]}
-        </div>
-      ))}
 
       <div className="container mx-auto px-4 max-w-7xl relative z-10">
         {/* Header */}
@@ -175,48 +188,167 @@ const UltimateOrders = () => {
           </p>
         </div>
 
-        {/* Stats Summary */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
-          {[
-            { label: 'Tất cả', value: orders.length, icon: '📋', color: 'from-gray-400 to-gray-500' },
-            { label: 'Chờ xác nhận', value: orders.filter(o => o.order_status === 'pending').length, icon: '⏳', color: 'from-yellow-400 to-orange-400' },
-            { label: 'Đang xử lý', value: orders.filter(o => o.order_status === 'processing').length, icon: '📦', color: 'from-purple-400 to-pink-400' },
-            { label: 'Đã giao', value: orders.filter(o => o.order_status === 'delivered').length, icon: '✅', color: 'from-green-400 to-emerald-400' },
-            { label: 'Đã hủy', value: orders.filter(o => o.order_status === 'cancelled').length, icon: '❌', color: 'from-red-400 to-rose-400' },
-          ].map((stat, i) => (
-            <div key={i} className="bg-white rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all hover:scale-105">
-              <div className="text-3xl mb-2">{stat.icon}</div>
-              <div className={`text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r ${stat.color} mb-1`}>
-                {stat.value}
-              </div>
-              <div className="text-sm text-gray-600 font-semibold">{stat.label}</div>
-            </div>
-          ))}
+{/* PHẦN 1: Stats Summary - Màu đậm */}
+<div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-10">
+  {[
+    { 
+      label: 'Tất cả', 
+      value: orders.length, 
+      icon: FaClipboardList,  
+      bgColor: 'bg-gray-50',
+      borderColor: 'border-gray-300',
+      textColor: 'text-gray-800',
+      countColor: 'text-gray-900',
+      iconColor: 'text-gray-600'
+    },
+    { 
+      label: 'Chờ xác nhận', 
+      value: orders.filter(o => o.order_status === 'pending').length, 
+      icon: FaHourglassHalf, 
+      bgColor: 'bg-orange-50',
+      borderColor: 'border-orange-300',
+      textColor: 'text-orange-800',
+      countColor: 'text-orange-900',
+      iconColor: 'text-orange-600'
+    },
+    { 
+      label: 'Đang xử lý', 
+      value: orders.filter(o => o.order_status === 'processing').length, 
+      icon: FaBox, 
+      bgColor: 'bg-indigo-50',
+      borderColor: 'border-indigo-300',
+      textColor: 'text-indigo-800',
+      countColor: 'text-indigo-900',
+      iconColor: 'text-indigo-600'
+    },
+    { 
+      label: 'Đã giao', 
+      value: orders.filter(o => o.order_status === 'delivered').length, 
+      icon: FaTruck,  
+      bgColor: 'bg-emerald-50',
+      borderColor: 'border-emerald-300',
+      textColor: 'text-emerald-800',
+      countColor: 'text-emerald-900',
+      iconColor: 'text-emerald-600'
+    },
+    { 
+      label: 'Đã hủy', 
+      value: orders.filter(o => o.order_status === 'cancelled').length, 
+      icon: FaTimes, 
+      bgColor: 'bg-rose-50',
+      borderColor: 'border-rose-300',
+      textColor: 'text-rose-800',
+      countColor: 'text-rose-900',
+      iconColor: 'text-rose-600'
+    },
+  ].map((stat, i) => {
+    const IconComponent = stat.icon
+    
+    return (
+      <div 
+        key={i} 
+        className={`${stat.bgColor} rounded-xl p-4 border-2 ${stat.borderColor} hover:shadow-lg transition-all duration-200 hover:scale-[1.02] group`}
+      >
+        <div className="flex items-center justify-between mb-3">
+          <div className={`text-2xl ${stat.iconColor} transition-transform group-hover:scale-110`}>
+            <IconComponent />
+          </div>
+          <div className={`text-3xl font-black ${stat.countColor}`}>
+            {stat.value}
+          </div>
+        </div>
+        <div className={`text-sm font-bold ${stat.textColor}`}>
+          {stat.label}
+        </div>
+        {stat.sub && (
+          <div className={`text-xs ${stat.textColor} opacity-80 mt-1`}>
+            {stat.sub}
+          </div>
+        )}
+      </div>
+    )
+  })}
+</div>
+{/* Filters - Vertical Design with Red Square Icon */}
+<div className="flex flex-wrap gap-3 mb-10 justify-center">
+  {[
+    { 
+      value: 'all', 
+      label: 'All', 
+      sub: 'Tất cả đơn hàng', 
+      icon: FaClipboardList, 
+      gradient: 'from-gray-500 to-gray-600',
+      bgColor: 'from-gray-100 to-gray-200'
+    },
+    { 
+      value: 'pending', 
+      label: 'Pending confirmation', 
+      sub: 'Đang chờ xác nhận', 
+      icon: FaHourglassHalf, 
+      gradient: 'from-yellow-500 to-orange-500',
+      bgColor: 'from-yellow-100 to-orange-100'
+    },
+    { 
+      value: 'processing', 
+      label: 'Processing', 
+      sub: 'Đang chuẩn bị hàng', 
+      icon: FaBox, 
+      gradient: 'from-purple-500 to-pink-500',
+      bgColor: 'from-purple-100 to-pink-100'
+    },
+    { 
+      value: 'delivered', 
+      label: 'Delivered', 
+      sub: 'Đã giao thành công', 
+      icon: FaTruck, 
+      gradient: 'from-green-500 to-emerald-500',
+      bgColor: 'from-green-100 to-emerald-100'
+    },
+    { 
+      value: 'cancelled', 
+      label: 'Cancelled', 
+      sub: 'Đơn hàng đã hủy', 
+      icon: FaTimes, 
+      gradient: 'from-red-500 to-rose-500',
+      bgColor: 'from-red-100 to-rose-100'
+    },
+  ].map((tab) => {
+    const isActive = filter === tab.value;
+    
+    return (
+      <button
+        key={tab.value}
+        onClick={() => setFilter(tab.value)}
+        className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all text-base min-w-[180px] ${
+          isActive
+            ? `bg-gradient-to-r ${tab.gradient} text-white shadow-xl`
+            : `bg-gradient-to-r ${tab.bgColor} text-gray-700 hover:bg-white border border-gray-200 hover:shadow-lg`
+        }`}
+      >
+        {/* Icon trong hình vuông màu đỏ */}
+        <div className={`w-10 h-10 flex items-center justify-center rounded-lg ${
+          isActive 
+            ? 'bg-white/20' 
+            : 'bg-gradient-to-br from-red-500 to-red-600'
+        }`}>
+          <tab.icon className={`text-lg ${isActive ? 'text-white' : 'text-white'}`} />
+        </div>
+        
+        {/* Nội dung bên phải */}
+        <div className="flex-1 text-left">
+          <div className={`font-bold text-sm ${isActive ? 'text-white' : 'text-gray-800'}`}>
+            {tab.label}
+          </div>
+          <div className={`text-xs ${isActive ? 'text-white/90' : 'text-gray-600'}`}>
+            {tab.sub}
+          </div>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-wrap gap-3 mb-10 justify-center">
-          {[
-            { value: 'all', label: 'Tất cả', icon: '📋', gradient: 'from-gray-500 to-gray-600' },
-            { value: 'pending', label: 'Chờ xác nhận', icon: '⏳', gradient: 'from-yellow-500 to-orange-500' },
-            { value: 'processing', label: 'Đang xử lý', icon: '📦', gradient: 'from-purple-500 to-pink-500' },
-            { value: 'delivered', label: 'Đã giao', icon: '✅', gradient: 'from-green-500 to-emerald-500' },
-            { value: 'cancelled', label: 'Đã hủy', icon: '❌', gradient: 'from-red-500 to-rose-500' },
-          ].map((tab) => (
-            <button
-              key={tab.value}
-              onClick={() => setFilter(tab.value)}
-              className={`px-8 py-4 rounded-2xl font-bold transition-all text-lg ${
-                filter === tab.value
-                  ? `bg-gradient-to-r ${tab.gradient} text-white shadow-2xl scale-110`
-                  : 'bg-white text-gray-700 hover:bg-gray-50 border-2 border-gray-200 hover:border-orange-300 shadow-md hover:shadow-lg'
-              }`}
-            >
-              <span className="text-2xl mr-2">{tab.icon}</span>
-              {tab.label}
-            </button>
-          ))}
-        </div>
+      </button>
+    )
+  })}
+</div>
+
 
         {/* Orders List */}
         {loading ? (

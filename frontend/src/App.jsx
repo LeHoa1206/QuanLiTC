@@ -43,6 +43,10 @@ import CustomerAppointmentEdit from './pages/customer/CustomerAppointmentEdit'
 // Chat
 import Chat from './pages/Chat'
 import AdminChat from './pages/admin/AdminChat'
+import AdminVouchers from './pages/admin/AdminVouchers'
+
+// Notifications
+import Notifications from './pages/Notifications'
 
 // Sales Pages
 import SalesDashboard from './pages/sales/SalesDashboard'
@@ -69,6 +73,8 @@ import { AuthProvider } from './contexts/AuthContext'
 import { CartProvider } from './contexts/CartContext'
 import { WishlistProvider } from './contexts/WishlistContext'
 import { CompareProvider } from './contexts/CompareContext'
+import { NotificationProvider } from './contexts/NotificationContext'
+
 
 function App() {
   return (
@@ -76,6 +82,7 @@ function App() {
       <CartProvider>
         <WishlistProvider>
           <CompareProvider>
+            <NotificationProvider>
             <BrowserRouter>
           <Routes>
             {/* Home */}
@@ -211,6 +218,17 @@ function App() {
               </div>
             } />
 
+            {/* Notifications */}
+            <Route path="/notifications" element={
+              <div className="flex flex-col min-h-screen">
+                <UltimateHeader />
+                <main className="flex-1">
+                  <Notifications />
+                </main>
+                <UltimateFooter />
+              </div>
+            } />
+
             {/* Wishlist */}
             <Route path="/wishlist" element={
               <div className="flex flex-col min-h-screen">
@@ -276,6 +294,8 @@ function App() {
               <Route path="appointments" element={<UltimateAdminAppointments />} />
               <Route path="statistics" element={<UltimateAdminStatistics />} />
               <Route path="chat" element={<AdminChat />} />
+              <Route path="vouchers" element={<AdminVouchers />} />
+              <Route path="coupons" element={<AdminVouchers />} />
             </Route>
 
             {/* Sales Routes */}
@@ -450,6 +470,7 @@ function App() {
             theme="dark"
           />
         </BrowserRouter>
+            </NotificationProvider>
           </CompareProvider>
         </WishlistProvider>
       </CartProvider>

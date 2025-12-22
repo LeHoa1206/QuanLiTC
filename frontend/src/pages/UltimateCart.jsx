@@ -1,16 +1,32 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { FaTrash, FaMinus, FaPlus, FaShoppingBag, FaArrowRight, FaHeart, FaGift, FaTruck, FaShieldAlt, FaUndo, FaStar } from 'react-icons/fa'
+import { FaTrash, FaMinus, FaPlus, FaShoppingBag, FaArrowRight, FaGift, FaTruck, FaShieldAlt, FaUndo, FaStar } from 'react-icons/fa'
 import { useCart } from '../contexts/CartContext'
+
 import { toast } from 'react-toastify'
 
 const UltimateCart = () => {
   const { cart, updateQuantity, removeFromCart, getCartTotal, clearCart } = useCart()
-  const [voucher, setVoucher] = useState('')
-  const [discount, setDiscount] = useState(0)
   const [removingId, setRemovingId] = useState(null)
   const [selectedItems, setSelectedItems] = useState([])
   const navigate = useNavigate()
+
+  // Handle quantity update with stock validation
+  const handleQuantityUpdate = (itemId, newQuantity) => {
+    const item = cart.find(cartItem => cartItem.id === itemId)
+    if (!item) return
+
+    if (newQuantity > item.stock_quantity) {
+      toast.error(`Chỉ còn ${item.stock_quantity} sản phẩm trong kho`)
+      return
+    }
+
+    if (newQuantity < 1) {
+      newQuantity = 1
+    }
+
+    updateQuantity(itemId, newQuantity)
+  }
 
   // Select all items by default when cart changes
   useEffect(() => {
@@ -54,16 +70,7 @@ const UltimateCart = () => {
     }, 300)
   }
 
-  const applyVoucher = () => {
-    if (voucher === 'PETLOVE') {
-      setDiscount(50000)
-      toast.success('🎉 Áp dụng mã giảm giá thành công!')
-    } else if (voucher) {
-      toast.error('Mã giảm giá không hợp lệ')
-    }
-  }
-
-  const finalTotal = Math.max(0, getSelectedTotal() - discount)
+  const finalTotal = getSelectedTotal()
 
   if (cart.length === 0) {
     return (
@@ -240,7 +247,7 @@ const UltimateCart = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 bg-gray-100 rounded-full p-2">
                         <button
-                          onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
+                          onClick={() => handleQuantityUpdate(item.id, item.quantity - 1)}
                           className="w-10 h-10 bg-white hover:bg-purple-100 rounded-full flex items-center justify-center transition-all shadow-md hover:shadow-lg active:scale-95"
                         >
                           <FaMinus className="text-purple-600" />
@@ -249,7 +256,7 @@ const UltimateCart = () => {
                           {item.quantity}
                         </span>
                         <button
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          onClick={() => handleQuantityUpdate(item.id, item.quantity + 1)}
                           className="w-10 h-10 bg-white hover:bg-purple-100 rounded-full flex items-center justify-center transition-all shadow-md hover:shadow-lg active:scale-95"
                         >
                           <FaPlus className="text-purple-600" />
@@ -321,15 +328,8 @@ const UltimateCart = () => {
                   </div>
                 )}
 
-                {discount > 0 && (
-                  <div className="flex justify-between text-purple-600">
-                    <span>Mã giảm giá:</span>
-                    <span className="font-bold">-{discount.toLocaleString('vi-VN')}đ</span>
-                  </div>
-                )}
-
                 <div className="flex justify-between text-gray-600">
-                  <span>Phí vận chuyển:</span>
+                  <span>Phí vận chuyển</span>
                   <span className="font-bold text-green-600">Miễn phí</span>
                 </div>
 
@@ -340,9 +340,9 @@ const UltimateCart = () => {
                       <p className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500">
                         {finalTotal.toLocaleString('vi-VN')}đ
                       </p>
-                      {(savings + discount) > 0 && (
+                      {savings > 0 && (
                         <p className="text-sm text-green-600 font-semibold">
-                          Đã tiết kiệm {(savings + discount).toLocaleString('vi-VN')}đ
+                          Đã tiết kiệm {savings.toLocaleString('vi-VN')}đ
                         </p>
                       )}
                     </div>
@@ -350,29 +350,7 @@ const UltimateCart = () => {
                 </div>
               </div>
 
-              {/* Voucher */}
-              <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl">
-                <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
-                  <FaGift className="text-purple-500" />
-                  Mã giảm giá
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={voucher}
-                    onChange={(e) => setVoucher(e.target.value.toUpperCase())}
-                    placeholder="Nhập mã (VD: PETLOVE)"
-                    className="flex-1 px-4 py-3 border-2 border-purple-200 rounded-xl focus:outline-none focus:border-purple-400 transition-all"
-                  />
-                  <button 
-                    onClick={applyVoucher}
-                    className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold rounded-xl hover:shadow-lg transition-all active:scale-95"
-                  >
-                    Áp dụng
-                  </button>
-                </div>
-                <p className="text-xs text-gray-500 mt-2">💡 Mã PETLOVE giảm 50.000đ</p>
-              </div>
+
 
               {/* Checkout Button */}
               <Link

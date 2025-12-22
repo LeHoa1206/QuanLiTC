@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { FaPaperPlane, FaImage, FaTimes, FaSmile, FaCircle, FaArrowLeft, FaHome, FaHeadset, FaComments } from 'react-icons/fa'
+import { FaPaperPlane, FaImage, FaTimes, FaArrowLeft, FaHome, FaHeadset, FaComments } from 'react-icons/fa'
 import { useAuth } from '../contexts/AuthContext'
 import { chatService } from '../services/chatService'
 import { toast } from 'react-toastify'
@@ -92,7 +92,12 @@ const Chat = () => {
       const newMessages = await chatService.getNewMessages(selectedConversation.id, lastMessageId)
       
       if (newMessages.length > 0) {
-        setMessages(prev => [...prev, ...newMessages])
+        // Lọc bỏ tin nhắn đã tồn tại để tránh duplicate
+        setMessages(prev => {
+          const existingIds = new Set(prev.map(m => m.id))
+          const uniqueNewMessages = newMessages.filter(m => !existingIds.has(m.id))
+          return uniqueNewMessages.length > 0 ? [...prev, ...uniqueNewMessages] : prev
+        })
         await chatService.markAsRead(selectedConversation.id)
       }
     } catch (error) {
@@ -115,7 +120,12 @@ const Chat = () => {
         response = await chatService.sendMessage(selectedConversation.id, messageText)
       }
       
-      setMessages(prev => [...prev, response.data])
+      // Kiểm tra tin nhắn đã tồn tại chưa trước khi thêm
+      setMessages(prev => {
+        const exists = prev.some(m => m.id === response.data.id)
+        return exists ? prev : [...prev, response.data]
+      })
+      
       setMessageText('')
       setImageFile(null)
       setImagePreview(null)

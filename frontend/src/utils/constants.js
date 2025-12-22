@@ -148,6 +148,8 @@ export const STORAGE_KEYS = {
   USER_DATA: 'user_data',
   CART: 'cart_items',
   WISHLIST: 'wishlist_items',
+  APPLIED_VOUCHER: 'applied_voucher',
+  VOUCHER_DISCOUNT: 'voucher_discount',
 }
 
 // Toast Messages

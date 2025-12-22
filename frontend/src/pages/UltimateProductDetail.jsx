@@ -41,6 +41,11 @@ const UltimateProductDetail = () => {
   }
 
   const handleAddToCart = () => {
+    if (quantity > product.stock_quantity) {
+      toast.error(`Chỉ còn ${product.stock_quantity} sản phẩm trong kho`)
+      return
+    }
+    
     const success = addToCart({ ...product, quantity })
     if (success) {
       toast.success('Đã thêm vào giỏ hàng! 🛒')
@@ -48,6 +53,11 @@ const UltimateProductDetail = () => {
   }
 
   const handleBuyNow = () => {
+    if (quantity > product.stock_quantity) {
+      toast.error(`Chỉ còn ${product.stock_quantity} sản phẩm trong kho`)
+      return
+    }
+    
     const success = addToCart({ ...product, quantity })
     if (success) {
       navigate('/cart')
@@ -331,14 +341,20 @@ const UltimateProductDetail = () => {
                   </button>
                   <span className="text-3xl font-black text-gray-800 w-16 text-center">{quantity}</span>
                   <button 
-                    onClick={() => setQuantity(quantity + 1)}
+                    onClick={() => {
+                      if (quantity >= product.stock_quantity) {
+                        toast.error(`Chỉ còn ${product.stock_quantity} sản phẩm trong kho`)
+                        return
+                      }
+                      setQuantity(quantity + 1)
+                    }}
                     className="w-12 h-12 bg-gray-100 hover:bg-gray-200 rounded-xl flex items-center justify-center transition-all hover:scale-110 font-bold text-xl"
                   >
                     <FaPlus />
                   </button>
                   <span className="text-gray-500 ml-4">
                     {product.stock_quantity > 0 ? (
-                      <span className="text-green-600 font-semibold">✓ Còn hàng</span>
+                      <span className="text-green-600 font-semibold">✓ Còn {product.stock_quantity} sản phẩm</span>
                     ) : (
                       <span className="text-red-600 font-semibold">✗ Hết hàng</span>
                     )}

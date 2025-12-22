@@ -1,7 +1,8 @@
   import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { FaUsers, FaBox, FaShoppingCart, FaDollarSign, FaChartLine, FaPaw, FaCalendarAlt } from 'react-icons/fa'
+import { FaUsers, FaBox, FaShoppingCart, FaDollarSign, FaChartLine, FaPaw, FaCalendarAlt, FaBell } from 'react-icons/fa'
 import { getDashboardStats } from '../../services/adminService'
+import { notificationService } from '../../services/notificationService'
 
 const UltimateAdminDashboard = () => {
   const [stats, setStats] = useState({
@@ -10,10 +11,12 @@ const UltimateAdminDashboard = () => {
     total_customers: 0,
     total_products: 0,
   })
+  const [recentNotifications, setRecentNotifications] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetchStats()
+    fetchRecentNotifications()
   }, [])
 
   const fetchStats = async () => {
@@ -31,6 +34,51 @@ const UltimateAdminDashboard = () => {
       console.error('Error:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchRecentNotifications = async () => {
+    try {
+      const response = await notificationService.getRecent()
+      setRecentNotifications(response.notifications || [])
+    } catch (error) {
+      console.error('Error fetching notifications:', error)
+    }
+  }
+
+  // Format time ago
+  const formatTimeAgo = (dateString) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffInMinutes = Math.floor((now - date) / (1000 * 60))
+    
+    if (diffInMinutes < 1) return 'Vừa xong'
+    if (diffInMinutes < 60) return `${diffInMinutes} phút trước`
+    
+    const diffInHours = Math.floor(diffInMinutes / 60)
+    if (diffInHours < 24) return `${diffInHours} giờ trước`
+    
+    const diffInDays = Math.floor(diffInHours / 24)
+    if (diffInDays < 7) return `${diffInDays} ngày trước`
+    
+    return date.toLocaleDateString('vi-VN')
+  }
+
+  // Get notification icon and color
+  const getNotificationStyle = (type) => {
+    switch (type) {
+      case 'order':
+        return { color: 'bg-blue-500', icon: '🛒' }
+      case 'appointment':
+        return { color: 'bg-green-500', icon: '📅' }
+      case 'message':
+        return { color: 'bg-purple-500', icon: '💬' }
+      case 'review':
+        return { color: 'bg-yellow-500', icon: '⭐' }
+      case 'system':
+        return { color: 'bg-gray-500', icon: '⚙️' }
+      default:
+        return { color: 'bg-blue-500', icon: '🔔' }
     }
   }
 
@@ -170,26 +218,34 @@ const UltimateAdminDashboard = () => {
             Hoạt Động Gần Đây
           </h3>
           <div className="space-y-3">
-            {[
-              { action: 'Đơn hàng mới', desc: 'Khách hàng A đặt đơn hàng', time: '5 phút trước', color: 'bg-blue-500' },
-              { action: 'Sản phẩm mới', desc: 'Thêm sản phẩm "Thức ăn cho chó"', time: '15 phút trước', color: 'bg-green-500' },
-              { action: 'Đặt lịch dịch vụ', desc: 'Khách hàng B đặt lịch spa', time: '30 phút trước', color: 'bg-purple-500' },
-              { action: 'Đánh giá mới', desc: 'Sản phẩm nhận 5 sao', time: '1 giờ trước', color: 'bg-yellow-500' },
-              { action: 'User mới', desc: 'Khách hàng C đăng ký', time: '2 giờ trước', color: 'bg-pink-500' },
-            ].map((activity, i) => (
-              <div key={i} className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all border border-gray-200">
-                <div className={`w-3 h-3 ${activity.color} rounded-full mt-1.5 animate-pulse shadow-lg`}></div>
-                <div className="flex-1">
-                  <p className="text-gray-900 font-bold">{activity.action}</p>
-                  <p className="text-gray-600 text-sm">{activity.desc}</p>
-                  <p className="text-gray-400 text-xs mt-1">{activity.time}</p>
-                </div>
+            {recentNotifications.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <FaBell className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                <p>Chưa có hoạt động nào</p>
               </div>
-            ))}
+            ) : (
+              recentNotifications.slice(0, 5).map((notification) => {
+                const style = getNotificationStyle(notification.type)
+                return (
+                  <div key={notification.id} className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all border border-gray-200">
+                    <div className={`w-3 h-3 ${style.color} rounded-full mt-1.5 animate-pulse shadow-lg`}></div>
+                    <div className="flex-1">
+                      <p className="text-gray-900 font-bold">{notification.title}</p>
+                      <p className="text-gray-600 text-sm line-clamp-2">{notification.content}</p>
+                      <p className="text-gray-400 text-xs mt-1">{formatTimeAgo(notification.created_at)}</p>
+                    </div>
+                    <span className="text-lg">{style.icon}</span>
+                  </div>
+                )
+              })
+            )}
           </div>
-          <button className="w-full mt-4 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white font-bold rounded-xl hover:from-purple-600 hover:to-pink-700 transition-all shadow-lg">
-            Xem lịch sử đầy đủ
-          </button>
+          <Link 
+            to="/notifications" 
+            className="block w-full mt-4 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white font-bold rounded-xl hover:from-purple-600 hover:to-pink-700 transition-all shadow-lg text-center"
+          >
+            Xem tất cả thông báo
+          </Link>
         </div>
       </div>
     </div>

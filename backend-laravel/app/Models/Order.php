@@ -20,6 +20,7 @@ class Order extends Model
         'subtotal',
         'discount_amount',
         'total_amount',
+        'voucher_code',
         'payment_method',
         'payment_status',
         'order_status',
